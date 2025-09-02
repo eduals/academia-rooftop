@@ -1,0 +1,31 @@
+<!--
+  templateType: membership_register_page
+  isAvailableForNewContent: true
+  label: Academia - membership registration
+  screenshotPath: ../../images/template-previews/membership-register.png
+-->
+{% set template_css = '../../css/templates/system.css' %}
+{% extends '../layouts/base.html' %}
+{# pageTitle is used on system templates for setting a value for the title tag #}
+{% set pageTitle = "Franquias | Cadastro" %}
+
+
+{% block body %}
+<section class="systems-page membership-register">
+  <div class="">
+    {% module 'content'
+      path='@hubspot/rich_text',
+      html='<h1>Bem-vindo!</h1><p>Configure sua senha para fazer login e ver o conteúdo que você agora tem acesso.</p>'
+    %}
+    <div class="form-container membership-register__form">
+      {% member_register 'my_register'
+        email_label='Email',
+        password_confirm_label='Confirmar senha',
+        password_label='Senha',
+        submit_button_text='Salvar senha'
+      %}
+    </div>
+    <!-- Removido o entre em contato com o administrador -->
+  </div>
+</section>
+{% endblock %}

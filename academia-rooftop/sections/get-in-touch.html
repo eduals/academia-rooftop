@@ -1,0 +1,84 @@
+<!--
+templateType: section
+label: Get In Touch
+isAvailableForNewContent: true
+screenshotPath: ../images/section-previews/git.png
+description: "Section separated with two column left column has Content and right column has button"
+-->
+
+{% dnd_section
+   vertical_alignment="MIDDLE",
+   class="ac-git ac-tab-full-width",
+   background_image={
+    'backgroundPosition': 'MIDDLE_CENTER',
+    'backgroundSize': 'cover',
+    'imageUrl': get_asset_url('../images/multipurpose/bg-pattern.jpg')
+  },
+   background_color= {{ theme.color_font_setting.global_colors.primary.color }},
+   padding= {
+        'default': {
+          'top': 70,
+          'right': 70,
+          'bottom': 70,
+          'left': 70
+        },
+        'mobile': {
+          'top': 30,
+          'right': 20,
+          'bottom': 20,
+          'left': 30
+        }
+      },
+%}
+{% dnd_column 
+    offset=0,
+    width=9,
+%}
+{% dnd_row %}
+{% dnd_module 
+        path='../modules/title-content',
+        'subtitle'='Lets get in touch!',
+        'content'='<h2 style=\"color: #ffffff;\">Interested? Lets get in touch!</h2><p style=\"color: #ffffff;\">Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint.Amet minim mollit non deserunt ullamco est sit aliqua dolor do.</p>'
+        style={ 
+        'max_width':{enable: true, max_width: 650},
+        'subtitle' : {
+            'overwrite_style' : true
+          }
+        }
+%}
+{% end_dnd_module %}
+{% end_dnd_row %}
+{% end_dnd_column %}
+{% dnd_column 
+    offset=9,
+    width=3,
+    padding = {
+        'default': {
+          'top': 0,
+          'right': 0,
+          'bottom': 0,
+          'left': 0
+        },
+        'mobile': {
+          'top': 0,
+          'right': 0,
+          'bottom': 20,
+          'left': 0
+        }
+      }
+%}
+{% dnd_row %}
+{% dnd_module 
+        path='../modules/button',
+        style= {
+          'alignment' : {'alignment_desktop_': 'right','alignment_mobile_': 'center'}
+        }
+        button= {
+          'style': 'filled_light',
+          'text':'Get Started',
+        },
+%}
+{% end_dnd_module %}
+{% end_dnd_row %}
+{% end_dnd_column %}
+{% end_dnd_section %}

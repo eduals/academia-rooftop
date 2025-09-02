@@ -1,0 +1,10 @@
+<!--
+    templateType: page
+    isAvailableForNewContent: false
+-->
+<!-- Begin partial -->
+{% if !array %}
+  {% set array = [] %}
+{% endif %}
+{% do array.append(registro_final) %}
+<!-- End partial -->

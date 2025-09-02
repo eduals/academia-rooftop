@@ -1,0 +1,73 @@
+<!--
+templateType: section
+label: Two Column Video Text
+isAvailableForNewContent: true
+screenshotPath: ../images/section-previews/content-video.png
+description: "Section separated with two column left column has Content with button and right column has Video."
+-->
+
+{% dnd_section
+  background_color="rgba(243, 244, 248, 1)",
+  vertical_alignment='MIDDLE',
+  class="ac-tab-full-width"
+%}
+{% dnd_column 
+  offset=0,
+  width=6 %}
+{% dnd_row  
+  padding={
+        'default': {
+          'top': 0,
+          'right': 0,
+          'bottom': 0,
+          'left': 0
+        },
+        'mobile': {
+          'top': 0,
+          'right': 0,
+          'bottom': 30,
+          'left': 0
+        }
+      }
+%}
+{% dnd_module
+        path='../modules/title-content',
+        "subtitle"="Why to enroll?",
+        "content"="<h2>Our teacher are the best & highly qualified</h2><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Elementum, egestas rutrum pellentesque malesuada imperdiet. Integer fermentum imperdiet id magna nunc augue. Varius vel maecenas nec dictum interdum tortor.</p>"
+        primary_cta={ type: 'btn', style: 'filled_dark', text: 'View More' }
+        secondary_cta={ type: 'none', style: '', text: '' },
+        style={
+          'subtitle' : {
+            'overwrite_style' : true
+          }
+        }
+       %}
+{% end_dnd_module %}
+{% end_dnd_row %}
+{% end_dnd_column %}
+{% dnd_column 
+  offset=6,
+  width=6 %}
+{% dnd_row
+      padding={
+        'default': {
+          'top': 0,
+          'right': 0,
+          'bottom': 40,
+          'left': 0
+        },
+        'mobile': {
+          'top': 0,
+          'right': 0,
+          'bottom': 0,
+          'left': 0
+        }
+      }
+    %}
+{% dnd_module
+        path='../modules/video-popup'
+%}
+{% end_dnd_module %}
+{% end_dnd_row %}
+{% end_dnd_column %}
+{% end_dnd_section %}

@@ -1,0 +1,11 @@
+
+query myDeals {
+  CRM {
+    deal_collection {
+      items {
+        dealstage
+        dealname
+      }
+    }
+  }
+}

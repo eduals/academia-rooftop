@@ -1,0 +1,66 @@
+<!--
+  templateType: section
+  label: Questions & answers
+  isAvailableForNewContent: true
+  screenshotPath: ../images/section-previews/questions-answers.png
+  description: "Questions & answers (FAQ) section with accordions."
+-->
+
+{% dnd_section
+    padding={ 
+      'default': { 'top': context.section_padding_top || 100 }
+    },
+    margin={ 
+      'default': { 'bottom': context.section_margin_bottom }
+    },
+    background_color={{ context.background_color || '#FFD126' }}
+%}
+    {% dnd_column %}
+
+        {# Title #}
+
+        {% dnd_row
+            margin={ 'bottom': 100 }
+        %}
+            {% dnd_module path='../modules/fancy-header'
+                text={{ context.text || 'Questions & Answers' }},
+                huge={{ context.huge || true }},
+                styles={
+                    'color': {
+                        'color': context.color || '#000000'
+                    }
+                }
+            %}
+            {% end_dnd_module %}
+        {% end_dnd_row %}
+
+        {# Accordions #}
+
+        {% dnd_row %}
+            {% dnd_column
+                offset=0,
+                width=6,
+                padding={ 'left': 0, 'right': 0 },
+                margin={
+                    'mobile': { 'bottom': 30 }
+                }
+            %}
+                {% dnd_row %}
+                    {% dnd_module path='../modules/accordion' %}
+                    {% end_dnd_module %}
+                {% end_dnd_row %}
+            {% end_dnd_column %}
+            {% dnd_column
+                offset=6,
+                width=6,
+                padding={ 'left': 0, 'right': 0 }
+            %}
+                {% dnd_row %}
+                    {% dnd_module path='../modules/accordion' %}
+                    {% end_dnd_module %}
+                {% end_dnd_row %}
+            {% end_dnd_column %}
+        {% end_dnd_row %}
+        
+    {% end_dnd_column %}
+{% end_dnd_section %}

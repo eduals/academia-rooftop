@@ -1,0 +1,174 @@
+[ {
+  "id" : "8096103b-c75e-439e-004c-8e7a8d72b40a",
+  "name" : "image_field",
+  "label" : "Imagem",
+  "required" : true,
+  "locked" : true,
+  "responsive" : true,
+  "resizable" : true,
+  "show_loading" : false,
+  "type" : "image",
+  "display_width" : null,
+  "default" : {
+    "src" : "https://44736322.fs1.hubspotusercontent-na1.net/hubfs/44736322/logo-1.svg",
+    "alt" : "logo-1",
+    "width" : 170,
+    "height" : 38,
+    "max_width" : 170,
+    "max_height" : 38
+  }
+}, {
+  "id" : "b33ada97-4ffe-a448-aacb-1c86acbe115a",
+  "name" : "grupo_de_link",
+  "label" : "Grupo de link",
+  "required" : false,
+  "locked" : true,
+  "occurrence" : {
+    "min" : 2,
+    "max" : 6,
+    "sorting_label_field" : "c9fb1e07-d61e-32e7-8fbf-d3a8f6b8874b",
+    "default" : 2
+  },
+  "children" : [ {
+    "id" : "e36eabb9-7a1b-7100-c219-79f5488777cf",
+    "name" : "link_label",
+    "label" : "Label",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "c9fb1e07-d61e-32e7-8fbf-d3a8f6b8874b",
+    "name" : "link_href",
+    "label" : "href",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "91c6f939-db1c-0686-4402-246ce7e211ed",
+    "name" : "link_ancora",
+    "label" : "ancora",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  } ],
+  "tab" : "CONTENT",
+  "expanded" : false,
+  "group_occurrence_meta" : null,
+  "type" : "group",
+  "display_width" : null,
+  "default" : [ { }, { } ]
+}, {
+  "id" : "c6c6a77f-3e72-f390-b640-19796b9d9be5",
+  "name" : "grupo_de_links_perfil",
+  "label" : "Cópia de Grupo de link",
+  "required" : false,
+  "locked" : true,
+  "occurrence" : {
+    "min" : 1,
+    "max" : 6,
+    "sorting_label_field" : "11f227ac-870a-963c-3210-0d786377b79c",
+    "default" : 1
+  },
+  "children" : [ {
+    "id" : "11f227ac-870a-963c-3210-0d786377b79c",
+    "name" : "link_label",
+    "label" : "Label",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "ae3da7f1-fe58-5240-1416-1d7220df999a",
+    "name" : "link_href",
+    "label" : "href",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "95ea7442-6f31-475a-cdd5-188ea4f569f2",
+    "name" : "link_ancora",
+    "label" : "ancora",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  } ],
+  "tab" : "CONTENT",
+  "expanded" : false,
+  "group_occurrence_meta" : null,
+  "type" : "group",
+  "display_width" : null,
+  "default" : [ { } ]
+}, {
+  "id" : "c644bb56-4306-b6ff-08bd-ea5d1ca7404b",
+  "name" : "bot_o",
+  "label" : "Botão",
+  "required" : false,
+  "locked" : true,
+  "children" : [ {
+    "id" : "540b672c-0215-a997-85f0-a75b901441a4",
+    "name" : "nome",
+    "label" : "Nome",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "7bb38831-e0bb-44d1-6baf-1dc6b48561ea",
+    "name" : "href",
+    "label" : "href",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  } ],
+  "tab" : "CONTENT",
+  "expanded" : false,
+  "group_occurrence_meta" : null,
+  "type" : "group",
+  "display_width" : null,
+  "default" : { }
+}, {
+  "id" : "1b8094f9-f734-d06c-0488-22626a0fa4ea",
+  "name" : "perfil_links",
+  "label" : "perfil_links",
+  "required" : false,
+  "locked" : true,
+  "children" : [ {
+    "id" : "131da890-78e1-bf9c-f779-3005b8377413",
+    "name" : "link_href",
+    "label" : "link_href",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  }, {
+    "id" : "c03e23d1-74e7-9004-0847-3d25c88155c0",
+    "name" : "link_label",
+    "label" : "link_label",
+    "required" : false,
+    "locked" : false,
+    "allow_new_line" : false,
+    "type" : "text",
+    "display_width" : null
+  } ],
+  "tab" : "CONTENT",
+  "expanded" : false,
+  "group_occurrence_meta" : null,
+  "type" : "group",
+  "display_width" : null,
+  "default" : { }
+} ]

@@ -1,0 +1,38 @@
+<!--
+templateType: error_page
+isAvailableForNewContent: true
+label: Academia - 404 error
+screenshotPath: ../../images/template-previews/error-404.png
+-->
+{% set template_css = '../../css/templates/system.css' %}
+{% set template_css = '../../css/404.css' %}
+
+{% extends '../layouts/base.html' %}
+{# pageTitle is used on system templates for setting a value for the title tag #}
+{% set pageTitle = "Página não encontrada" %}
+
+{% block body %}
+<section class="error-page" data-error="404">
+  <div class="error-page__banner system-page__banner">    
+    {% if theme.system_page_setting.error_page_not_found_setting.is_error_page_not_found_banner_img %}
+    {% set loadingAttr = theme.system_page_setting.error_page_not_found_setting.error_page_not_found_banner.error_page_not_found_banner_image.loading != 'disabled' ? 'loading="{{ theme.system_page_setting.error_page_not_found_setting.error_page_not_found_banner.error_page_not_found_banner_image.loading }}"' : '' %}
+    <img src="{{ theme.system_page_setting.error_page_not_found_setting.error_page_not_found_banner.error_page_not_found_banner_image.src }}" 
+    alt="{{ theme.system_page_setting.error_page_not_found_setting.error_page_not_found_banner.error_page_not_found_banner_image.alt }}" {{ loadingAttr }}>  
+    {% endif %}
+  </div>
+  <div>
+    {% module 'content'
+      path='@hubspot/rich_text',
+      html='<h1>Página não encontrada</h1><p>A página que você está procurando não existe ou foi movida. Que tal voltar à página inicial ou usar o menu de navegação?</p><small>Código de erro: 404</small>'
+    %}
+
+  </div>
+</section>
+
+<script>
+  // Redirect automático após 4 segundos
+  setTimeout(function() {
+    window.location.href = 'https://portal.rooftop.com.br/oportunidades';
+  }, 1000);
+</script>
+{% endblock body %}

@@ -1,0 +1,146 @@
+{# Página de Negócios - Portal do Franqueado Rooftop #}
+
+{% if request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid %}
+  
+  <script>
+    // Passar contact_id para o módulo JavaScript
+    window.hubspotContactId = '{{contact_id}}';
+    console.log('📌 Contact ID capturado:', window.hubspotContactId);
+  </script>
+{% else %}
+  <script>
+    window.hubspotContactId = null;
+    console.log('⚠️ Usuário não logado ou sem contact_id');
+  </script>
+{% endif %}
+
+  <header class="bg-white shadow-sm">
+    <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold tracking-tight text-gray-900">Negócios</h2>
+        
+                 <!-- ✅ BOTÃO CADASTRAR IMÓVEL - VISÍVEL APENAS QUANDO HÁ DADOS -->
+         <button id="btn-cadastrar-imovel-header" onclick="window.location.href='/cadastrar-imovel'" class="hidden cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+           <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+           </svg>
+           Cadastrar Imóvel
+         </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="mx-auto max-w-7xl px-4 py-6">
+      
+      <!-- ✅ SEÇÃO DE DEBUG LOGS -->
+<!--       <div class="debug-section hidden" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #495057; margin-bottom: 15px;">🔍 Debug Logs - Processamento HubL + JavaScript</h3>
+        <div id="debug-logs-container">
+          <p style="color: #6c757d;">Logs serão exibidos aqui conforme o processamento...</p>
+        </div>
+        
+        <script>
+          // Função para exibir logs em tempo real na tela
+          window.showDebugLogs = function() {
+            var container = document.getElementById('debug-logs-container');
+            if (container && window.hubspotProcessamento && window.hubspotProcessamento.debug_logs) {
+              var logs = window.hubspotProcessamento.debug_logs;
+              var html = '<div style="font-family: monospace; font-size: 12px;">';
+              
+              logs.forEach(function(log, index) {
+                html += '<div style="margin: 5px 0; padding: 8px; background: #e9ecef; border-radius: 4px;">';
+                html += '<strong>Etapa ' + log.etapa + ':</strong> ' + log.mensagem;
+                if (log.dados) {
+                  html += '<br><span style="color: #6f42c1;">' + JSON.stringify(log.dados, null, 2) + '</span>';
+                }
+                html += '<br><small style="color: #6c757d;">' + log.timestamp + '</small>';
+                html += '</div>';
+              });
+              
+              html += '</div>';
+              container.innerHTML = html;
+            }
+          };
+          
+          // Atualizar logs a cada segundo
+          setInterval(window.showDebugLogs, 1000);
+        </script>
+      </div> -->
+      
+      <section data-module="negociosModule" class="negocios-module">
+        
+        <div class="negocios-error" style="display: none;">
+           <div class="text-center py-16">
+             <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+               <svg class="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+             </div>
+             <h3 class="text-lg font-medium text-gray-900 mb-2">Erro ao carregar os dados</h3>
+             <p class="text-gray-500 mb-8">Tente recarregar a página ou entre em contato com o suporte.</p>
+             <button onclick="window.location.reload()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+               Tentar Novamente
+             </button>
+           </div>
+         </div>
+
+        <div class="negocios-content">
+          <!-- O conteúdo será inserido dinamicamente pelo JavaScript -->
+        </div>
+
+      </section>
+     </div>
+   </main>
+
+
+ <style>
+   @keyframes pulse {
+     0%, 100% { opacity: 1; }
+     50% { opacity: 0.5; }
+   }
+   
+   .animate-pulse {
+     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+   }
+ </style>
+
+<script>
+  // ✅ AGUARDAR PROCESSAMENTO E DEFINIR DADOS FINAIS
+  setTimeout(function() {
+    // Usar dados do processamento JavaScript em vez de HubL
+    var dadosProcessados = window.hubspotProcessamento || {};
+    var lista_final = dadosProcessados.negocios_list || {results: [], total: 0, has_more: false};
+    
+    window.hubspotNegociosData = {
+      success: dadosProcessados.encontrou_dados || false,
+      data: {
+        data: {
+          CRM: {
+            deal_collection: {
+              items: lista_final.results || []
+            }
+          }
+        }
+      },
+      total: lista_final.total || 0,
+      hasMore: lista_final.has_more || false,
+      timestamp: new Date().toISOString(),
+      // ✅ DADOS DE DEBUG INCLUÍDOS
+      debug: {
+        logs: dadosProcessados.debug_logs || [],
+        processamento_completo: dadosProcessados,
+        origem: 'JavaScript + HubL Híbrido'
+      }
+    };
+    
+    console.log('🎯 DADOS FINAIS PARA MODULE.JS:', window.hubspotNegociosData);
+    
+    // Disparar evento para o module.js saber que os dados estão prontos
+    if (typeof window.negocios !== 'undefined' && window.negocios.processarDados) {
+      window.negocios.processarDados();
+    }
+    
+  }, 100); // Pequeno delay para garantir que todo o processamento HubL terminou
+</script>

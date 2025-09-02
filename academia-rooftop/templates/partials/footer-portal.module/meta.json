@@ -1,0 +1,9 @@
+{
+  "global" : true,
+  "content_types" : [ "LANDING_PAGE", "SITE_PAGE" ],
+  "smart_type" : "NOT_SMART",
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 192760394026,
+  "label" : "Homecash Footer",
+  "is_available_for_new_content" : true
+}

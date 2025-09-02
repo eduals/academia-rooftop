@@ -1,0 +1,119 @@
+<!--
+  templateType: none
+-->
+<!doctype html>
+<!-- <html lang="{{ html_lang }}" {{ html_lang_dir }}> -->
+<html lang="pt-BR" {{ html_lang_dir }}>
+  <head>
+    <meta charset="utf-8">
+    <link rel="preconnect" href="https://cdn2.hubspot.net">
+    <link rel="preconnect" href="https://static.hsappstatic.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">    
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">   
+    
+    
+    {% if page_meta.html_title %}<title>{{ page_meta.html_title }} - Rooftop </title>{% endif %}
+    {% if site_settings.favicon_src %}<link rel="shortcut icon" href="{{ site_settings.favicon_src }}" />{% endif %}
+    <meta name="description" content="{{ page_meta.meta_description }}">
+    {% if template_css %}
+      {{ require_css(get_asset_url(template_css), { async: true }) }}
+    {% endif %}
+
+
+    {{ require_css(get_asset_url('../../css/library.min.css'), { async: true }) }}
+    {#{ require_css(get_asset_url('../../css/main.css')) }#}
+{#     {{ require_css(get_asset_url("../../css/theme-overrides.css")) }} #}
+{#     {{ require_js(get_asset_url("../../child.js")) }} #}
+    {{ standard_header_includes }}
+<!--     {#{ require_css(get_public_template_url("../../child.css")) }#}  -->
+   
+    {{ require_css(get_asset_url("/academia-rooftop/css/tailwind.css")) }}
+    {{ require_css(get_asset_url("/academia-rooftop/css/system-custom.css")) }}
+
+    <!-- <script src="{{ get_public_template_url('/academia-rooftop/js/tailwindcss3.4.js') }}"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+
+  </head>
+  <body>
+
+    <div class="min-h-full">
+
+{#     {% if request_contact.is_logged_in and request.contact.contact_vid %} #}
+    
+      {% module "module_17531187321109" path="/academia-rooftop/modules/header_portal", label="header_portal" %}
+
+{#       {% else %} #}
+
+      <!-- Quando nao estiver logado, nao exibe o menu -->
+     
+      
+{#       {% endif %} #}
+
+      <main>
+        {% block body %}
+        
+        {% endblock body %}
+
+      </main>
+      
+    </div>
+    
+    <!-- <div class="body-wrapper {{ builtin_body_classes }}">
+
+      
+      <main id="main-content" class="body-container-wrapper">
+       
+      </main>
+
+    </div> -->
+    
+    <script>
+      Array.from(document.getElementsByClassName("hs-menu-wrapper")).forEach(
+        function (element) {
+          element.classList.remove("hs-menu-wrapper");
+        }
+      );
+    </script>
+    {{ standard_footer_includes }}
+    {{ require_js(get_asset_url('../../js/library.min.js'), { position: 'head' }) }}
+    <script>
+      // Passive event listeners
+        jQuery.event.special.touchstart = {
+            setup: function( _, ns, handle ) {
+                this.addEventListener("touchstart", handle, { passive: !ns.includes("noPreventDefault") });
+            }
+        };
+        jQuery.event.special.touchmove = {
+            setup: function( _, ns, handle ) {
+                this.addEventListener("touchmove", handle, { passive: !ns.includes("noPreventDefault") });
+            }
+        };
+
+    </script>
+    {{ require_js(get_asset_url('../../js/main.js'), { position: 'footer', async: true, defer: true }) }}
+<!-- <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script> -->
+
+    {{ require_js(get_asset_url('../../js/menu-state-controll.js'), { position: 'footer', async: true, defer: true }) }}
+
+
+    <script>
+      (function(d,t) {
+        var BASE_URL="https://chat.rooftop.com.br";
+        var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+        g.src=BASE_URL+"/packs/js/sdk.js";
+        g.defer = true;
+        g.async = true;
+        s.parentNode.insertBefore(g,s);
+        g.onload=function(){
+          window.chatwootSDK.run({
+            websiteToken: '5wt3mAJhjQQDEHzvfZeR4AK7',
+            baseUrl: BASE_URL
+          })
+        }
+      })(document,"script");
+    </script>
+    
+    
+  </body>
+</html>

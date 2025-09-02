@@ -1,0 +1,282 @@
+{# Dashboard - Portal do Franqueado Rooftop #}
+{# Processamento completo de dados usando a mesma lógica do módulo negocios #}
+
+<script>
+// ✅ INICIALIZAR DADOS NO WINDOW ANTES DO PROCESSAMENTO HUBL
+window.hubspotDashboardProcessamento = {
+  encontrou_homecash: false,
+  negocios_processados: [],
+  debug_logs: [],
+  etapa_atual: 0
+};
+
+// Função para adicionar logs
+window.addDashboardDebugLog = function(etapa, mensagem, dados) {
+  window.hubspotDashboardProcessamento.debug_logs.push({
+    etapa: etapa,
+    mensagem: mensagem,
+    dados: dados || null,
+    timestamp: new Date().toISOString()
+  });
+  console.log('🔍 DASHBOARD ETAPA ' + etapa + ' - ' + mensagem, dados);
+};
+</script>
+
+{% if true %}
+{% if request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid  %}
+<!-- 133645175296 -->
+  
+  <script>
+    window.addDashboardDebugLog(1, 'Contact ID identificado para dashboard', '{{contact_id}}');
+  </script>
+  
+  {# Buscar negócios associados #}
+  {% set negocios_associados = crm_associations(contact_id, 'HUBSPOT_DEFINED', 4, '', 'hs_object_id,dealname,amount,dealstage,closedate,dealowner,pipeline,createdate', 100) %}
+ 
+  {% if negocios_associados.results|length > 0 %}
+    <script>
+      window.addDashboardDebugLog(2, 'Negócios encontrados para dashboard', {
+        total: {{negocios_associados.total}},
+        quantidade: {{negocios_associados.results|length}}
+      });
+    </script>
+    
+    {# Processar cada negócio para buscar tickets associados #}
+    {% for negocio in negocios_associados.results %}
+      {% set todos_tickets = crm_associations(negocio.hs_object_id, 'HUBSPOT_DEFINED', 27, '', 'hs_object_id,subject,hs_pipeline,hs_pipeline_stage,createdate,hs_ticket_priority,content,hs_ticket_category,closed_date,cep,endereco,estado_regiao,numero,bairro,cidade,completento,tipo_de_imovel,certidao_de_estado_civil,cnd_iptu,cpf_e_rg_do_s__proprietario_s_,boleto_de_condominio,iptu_do_imovel,matricula,comentarios_comite__pendencias_e_ressalvas_,comite_aprovou_,data_do_comite_de_aprovacao,prazo_de_caucao,valor_aprovado_para_compra___12_meses,valor_aprovado_para_compra___18_meses,valor_aprovado_para_locacao___12_meses,valor_aprovado_para_locacao___18_meses,fotos_internas,fotos_da_fachada,potencial_de_avaliacao_futura,qual_o_prazo_da_recompra_,valor_avaliado,valor_da_locacao,valor_de_liquidez__bruto_,valor_de_liquidez__para_cliente_,valor_de_recompra__referencia_,data_da_proposta_apresentada,detalhe_o_motivo_da_perda,motivo_da_perda,notas_iptu_do_imovel,notas_certidao_negativa_de_debitos_de_iptu,notas_cpf_e_rg_do_s__proprietario_s_,notas_certidao_de_estado_civil,notas_boleto_de_condominio,notas_matricula,status_iptu_do_imovel,status_certidao_negativa_de_debitos_de_iptu,status_cpf_e_rg_do_s__proprietario_s_,status_certidao_de_estado_civil,status_boleto_de_condominio,status_matricula', 50) %}
+      
+      <script>
+        window.addDashboardDebugLog(3, 'Processando negócio: {{negocio.dealname}}', {
+          negocio_id: '{{negocio.hs_object_id}}',
+          tickets_encontrados: {{todos_tickets.total}}
+        });
+      </script>
+      
+      {# ✅ USAR SELECTATTR PARA FILTRAR OS TICKETS CORRETAMENTE #}
+      {% set tickets_homecash = todos_tickets.results|selectattr('hs_pipeline', 'equalto', 0)|list %}
+      {% set ticket_franquia = todos_tickets.results|selectattr('hs_pipeline', 'equalto', 714520128)|first %}
+      
+      <script>
+        window.addDashboardDebugLog(4, 'Tickets filtrados com selectattr', {
+          negocio: '{{negocio.dealname}}',
+          tickets_homecash_count: {{tickets_homecash|length}},
+          tem_ticket_franquia: {% if ticket_franquia %}'sim'{% else %}'não'{% endif %}
+        });
+      </script>
+      
+      {# ✅ CRIAR UM REGISTRO PARA CADA TICKET HOMECASH ENCONTRADO #}
+      {% for ticket_homecash in tickets_homecash %}
+        <script>
+          window.addDashboardDebugLog(5, 'Processando ticket HomeCash individual - Iteração {{loop.index}}', {
+            ticket_id: '{{ticket_homecash.hs_object_id}}',
+            subject: '{{ticket_homecash.subject|truncate(50)}}',
+            stage: '{{ticket_homecash.hs_pipeline_stage}}',
+            loop_index: {{loop.index}},
+            total_tickets: {{tickets_homecash|length}}
+          });
+          
+          // ✅ CONSTRUIR REGISTRO COMPLETO PARA CADA TICKET HOMECASH
+          var registro_completo = {
+            // Dados do negócio original
+            //hs_object_id: '{{negocio.hs_object_id}}_{{ticket_homecash.hs_object_id}}', // ID único combinado
+            hs_object_id: '{{ticket_homecash.hs_object_id}}', // ID único combinado
+            deal_original_id: '{{negocio.hs_object_id}}',
+            dealname: '{{negocio.dealname}}',
+            original_amount: '{{negocio.amount}}',
+            original_dealstage: '{{negocio.dealstage}}',
+            original_closedate: '{{negocio.closedate}}',
+            original_dealowner: '{{negocio.dealowner}}',
+            original_pipeline: '{{negocio.pipeline}}',
+            original_createdate: '{{negocio.createdate}}',
+            
+            // Dados do ticket HomeCash ESPECÍFICO
+            ticket_homecash_id: '{{ticket_homecash.hs_object_id}}',
+            homecash_subject: '{{ticket_homecash.subject|replace("'", "\\'")|replace('"', '\\"')|replace("\n", "\\n")|replace("\r", "\\r")}}',
+            homecash_stage: '{{ticket_homecash.hs_pipeline_stage}}',
+            homecash_priority: '{{ticket_homecash.hs_ticket_priority}}',
+            homecash_category: '{{ticket_homecash.hs_ticket_category}}',
+            homecash_content: '{{ticket_homecash.content|replace("'", "\\'")|replace('"', '\\"')|replace("\n", "\\n")|replace("\r", "\\r")}}',
+            homecash_createdate: '{{ticket_homecash.createdate}}',
+            homecash_closedate: '{{ticket_homecash.closed_date}}',
+            
+            // Dados do ticket Franquia (se disponível)
+            {% if ticket_franquia %}
+              ticket_franquia_id: '{{ticket_franquia.hs_object_id}}',
+              ticket_franquia_subject: '{{ticket_franquia.subject|replace("'", "\\'")|replace('"', '\\"')|replace("\n", "\\n")|replace("\r", "\\r")}}',
+              ticket_franquia_stage: '{{ticket_franquia.hs_pipeline_stage}}',
+              ticket_franquia_createdate: '{{ticket_franquia.createdate}}',
+            {% else %}
+              ticket_franquia_id: '',
+              ticket_franquia_subject: '',
+              ticket_franquia_stage: '',
+              ticket_franquia_createdate: '',
+            {% endif %}
+            
+            // Dados de documentos do ticket HomeCash ESPECÍFICO
+            cep: '{{ticket_homecash.cep}}',
+            endereco: '{{ticket_homecash.endereco}}',
+            numero: '{{ticket_homecash.numero}}',
+            bairro: '{{ticket_homecash.bairro}}',
+            cidade: '{{ticket_homecash.cidade}}',
+            tipo_de_imovel: '{{ticket_homecash.tipo_de_imovel}}',
+            
+            // Status dos documentos ESPECÍFICOS deste ticket
+            status_iptu_do_imovel: '{{ticket_homecash.status_iptu_do_imovel}}',
+            status_certidao_negativa_de_debitos_de_iptu: '{{ticket_homecash.status_certidao_negativa_de_debitos_de_iptu}}',
+            status_cpf_e_rg_do_s__proprietario_s_: '{{ticket_homecash.status_cpf_e_rg_do_s__proprietario_s_}}',
+            status_certidao_de_estado_civil: '{{ticket_homecash.status_certidao_de_estado_civil}}',
+            status_boleto_de_condominio: '{{ticket_homecash.status_boleto_de_condominio}}',
+            status_matricula: '{{ticket_homecash.status_matricula}}',
+            
+            // Notas dos documentos ESPECÍFICAS deste ticket
+            notas_iptu_do_imovel: '{{ticket_homecash.notas_iptu_do_imovel}}',
+            notas_certidao_negativa_de_debitos_de_iptu: '{{ticket_homecash.notas_certidao_negativa_de_debitos_de_iptu}}',
+            notas_cpf_e_rg_do_s__proprietario_s_: '{{ticket_homecash.notas_cpf_e_rg_do_s__proprietario_s_}}',
+            notas_certidao_de_estado_civil: '{{ticket_homecash.notas_certidao_de_estado_civil}}',
+            notas_boleto_de_condominio: '{{ticket_homecash.notas_boleto_de_condominio}}',
+            notas_matricula: '{{ticket_homecash.notas_matricula}}',
+            
+            // Dados de aprovação ESPECÍFICOS deste ticket
+            valor_aprovado_para_compra___12_meses: '{{ticket_homecash.valor_aprovado_para_compra___12_meses}}',
+            valor_aprovado_para_locacao___12_meses: '{{ticket_homecash.valor_aprovado_para_locacao___12_meses}}',
+            valor_avaliado: '{{ticket_homecash.valor_avaliado}}',
+            valor_da_locacao: '{{ticket_homecash.valor_da_locacao}}',
+            comentarios_comite__pendencias_e_ressalvas_: '{{ticket_homecash.comentarios_comite__pendencias_e_ressalvas_}}',
+            
+            // Fotos ESPECÍFICAS deste ticket
+            fotos_internas: '{{ticket_homecash.fotos_internas}}',
+            fotos_da_fachada: '{{ticket_homecash.fotos_da_fachada}}',
+            
+            association_label: 'Dashboard - Negócio → Ticket HomeCash ({{ticket_homecash.hs_object_id}})'
+          };
+          
+          // Adicionar à lista de negócios processados
+          if (!window.hubspotDashboardProcessamento.negocios_processados) {
+            window.hubspotDashboardProcessamento.negocios_processados = [];
+          }
+
+          window.hubspotDashboardProcessamento.negocios_processados.push(registro_completo);
+          window.hubspotDashboardProcessamento.encontrou_homecash = true;
+          
+          window.addDashboardDebugLog(6, 'Registro específico adicionado ao dashboard', {
+            negocio: '{{negocio.dealname|truncate(50)}}',
+            ticket_homecash_id: '{{ticket_homecash.hs_object_id}}',
+            ticket_homecash_subject: '{{ticket_homecash.subject|truncate(50)}}',
+            {% if ticket_franquia %}
+            ticket_franquia: '{{ticket_franquia.hs_object_id}}',
+            {% else %}
+            ticket_franquia: 'não encontrado',
+            {% endif %}
+            // registro_id: '{{negocio.hs_object_id}}_{{ticket_homecash.hs_object_id}}', 
+            registro_id: '{{negocio.hs_object_id}}_{{ticket_homecash.hs_object_id}}',
+            total_registros_ate_agora: window.hubspotDashboardProcessamento.negocios_processados.length
+          });
+        </script>
+      {% endfor %}
+      
+      <script>
+        window.addDashboardDebugLog(7, 'Finalizado processamento do negócio', {
+          negocio: '{{negocio.dealname|truncate(50)}}',
+          tickets_homecash_encontrados: {{tickets_homecash|length}},
+          registros_criados: window.hubspotDashboardProcessamento.negocios_processados.length,
+          todos_ticket_ids: window.hubspotDashboardProcessamento.negocios_processados.map(r => r.ticket_homecash_id)
+        });
+      </script>
+      
+    {% endfor %}
+    
+  {% endif %}
+
+{% else %}
+  <script>
+    window.hubspotDashboardProcessamento = {
+      encontrou_homecash: false,
+      negocios_processados: [],
+      debug_logs: [],
+      negocios_list: {results: [], total: 0, has_more: false}
+    };
+    window.addDashboardDebugLog(0, 'Usuário não logado ou sem permissão - Dashboard', null);
+  </script>
+{% endif %}
+{% endif %}
+
+<div class="mx-auto max-w-7xl px-4 py-6">
+  <section data-module="dashboardModule" class="dashboard-module">
+    
+    <div class="dashboard-debug" style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px; display: none;">
+      <h4 style="margin: 0 0 10px 0; color: #6c757d;">Debug Controls</h4>
+      <button id="force-mock-data" class="debug-button" style="padding: 8px 16px; background: #ffc107; color: #212529; border: none; border-radius: 4px; cursor: pointer;">
+        Usar Dados Mock
+      </button>
+      <div id="debug-status" style="margin-top: 10px; font-size: 12px; color: #6c757d;"></div>
+    </div>
+
+    <div class="dashboard-loading" style="display: none;">
+      <div class="loading-spinner">
+        <p>Carregando dashboard...</p>
+      </div>
+    </div>
+
+    <div class="dashboard-error" style="display: none;">
+      <p>Erro ao carregar os dados.</p>
+    </div>
+
+    <div class="dashboard-content" style="display: none;">
+      <!-- O conteúdo será inserido dinamicamente pelo JavaScript -->
+    </div>
+
+    <div class="dashboard-empty" style="display: none;">
+      <div style="text-align: center; padding: 40px; color: #6c757d;">
+        <h3>Nenhum dado encontrado</h3>
+        <p>Não há negócios disponíveis no momento.</p>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<script>
+  // ✅ FINALIZAR PROCESSAMENTO E DEFINIR DADOS FINAIS PARA O DASHBOARD
+  setTimeout(function() {
+    // Usar dados do processamento JavaScript em vez de HubL simples
+    var dadosProcessados = window.hubspotDashboardProcessamento || {};
+    var lista_final = {
+      results: dadosProcessados.negocios_processados || [],
+      total: dadosProcessados.negocios_processados ? dadosProcessados.negocios_processados.length : 0,
+      has_more: false
+    };
+    
+    window.hubspotNegociosData = {
+      success: dadosProcessados.encontrou_homecash || false,
+      data: {
+        data: {
+          CRM: {
+            deal_collection: {
+              items: lista_final.results || []
+            }
+          }
+        }
+      },
+      total: lista_final.total || 0,
+      hasMore: lista_final.has_more || false,
+      timestamp: new Date().toISOString(),
+      source: 'hubspot_dashboard_processing',
+      isEditor: {{ is_in_editor|tojson }},
+      // ✅ DADOS DE DEBUG INCLUÍDOS
+      debug: {
+        logs: dadosProcessados.debug_logs || [],
+        processamento_completo: dadosProcessados,
+        origem: 'Dashboard JavaScript + HubL Híbrido - SelectAttr + Escape Fix'
+      }
+    };
+    
+    console.log('🎯 DADOS FINAIS PARA DASHBOARD MODULE.JS (ESCAPE FIX):', window.hubspotNegociosData);
+    
+    // Disparar evento para o module.js saber que os dados estão prontos
+    if (typeof window.dashboardModule !== 'undefined' && window.dashboardModule.processarDados) {
+      window.dashboardModule.processarDados();
+    }
+    
+  }, 100); // Pequeno delay para garantir que todo o processamento HubL terminou
+</script>

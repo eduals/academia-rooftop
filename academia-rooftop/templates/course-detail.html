@@ -1,0 +1,115 @@
+<!--
+templateType: page
+isAvailableForNewContent: true
+label: Course Detail
+screenshotPath: ../images/template-previews/course-detail.png
+-->
+{% extends './layouts/base.html' %}
+
+{% block body %}
+{% dnd_area 'dnd_area'
+  label='Main section',
+  class='body-container body-container--course-detail'
+%}
+
+{# Course Detail Banner #}
+{% dnd_section
+  full_width= True,
+  padding={
+    "default" : {
+      "bottom" : "0px",
+      "left" : "0px",
+      "right" : "0px",
+      "top" : "0px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12,
+    padding={
+      "default" : {
+        "bottom" : "0px",
+        "left" : "0px",
+        "right" : "0px",
+        "top" : "0px"
+      }
+    }
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/banner-layouts",
+        banner_content={
+          "content" : "<h1>A broad selection of courses</h1>",
+          "subtitle" : "Our Courses"
+        },
+        banner_layouts_choice={
+          "banner_layouts" : "background_image"
+        },
+        breadcrumb={
+          "breadcrumb" : {
+            "current" : {
+              "current_page" : "Course"
+            },
+            "parent" : [ {
+              "parent_name" : "Home",
+              "parent_page_link" : {
+                "no_follow" : false,
+                "open_in_new_tab" : false,
+                "url" : {
+                  "href" : "https://www.hubspot.com/",
+                  "type" : "EXTERNAL"
+                }
+              }
+            } ]
+          }
+        },
+        button_breadcrumb_choice={
+          "select_actions" : "breadcrumb"
+        },
+        style={
+          "background_image" : {
+            "image" : {
+              "alt" : "Library",
+              "height" : 482,
+              "loading" : "lazy",
+              "max_height" : 482,
+              "max_width" : 1366,
+              "size_type" : "exact",
+              "src" :  get_asset_url('../images/multipurpose/banner-twelve.jpg'),
+              "width" : 1366
+            }
+          },
+          "max_width" : {
+            "enable" : true
+          },
+           "breadcrumb" : {
+              "overwrite_color" : true
+            },
+            "content_color" : {
+              "heading" : {
+                "enable_heading_color" : true
+              },
+              "subtitle" : {
+                "overwrite_style" : true
+              },
+              "text" : {
+                "enable_content_color" : true
+              }
+            }
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End of Course Detail Banner #}
+
+{# Course Content Section #}
+{% include_dnd_partial path='../sections/sidebar-content.html' %}
+{# End Of Course Content Section #}
+
+{# End Of Testimonial Section #}
+
+{% end_dnd_area %}
+{% endblock body %}

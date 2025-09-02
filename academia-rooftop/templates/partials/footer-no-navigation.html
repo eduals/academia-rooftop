@@ -1,0 +1,60 @@
+<!--
+templateType: global_partial
+label: Footer
+-->
+<footer class="footer ac-footer footer--no-navigation">
+
+  {# Top dnd top footer drag and drop area #}
+  {% if theme.layout_setting.header.enable_top_footer == true %}
+  {% dnd_area 'dnd-top-footer' label='Top dnd footer' class="footer-dnd-area1 content-wrapper" %}
+  {% end_dnd_area %}
+  {% endif %}
+  {# End dnd top footer drag and drop area #}
+
+  {% dnd_area 'footer' class='footer-dnd-area2 footer__container content-wrapper', label='Footer' %}
+
+  {# footer #}
+  {% dnd_section
+    padding={
+        'top': 30,
+        'bottom': 30,
+        'left': 0,
+        'right': 0
+    },
+     vertical_alignment='MIDDLE',  
+    full_width=true
+
+    %}
+  {% dnd_column
+   padding={
+        'top': 0,
+        'bottom': 0,
+        'left': 0,
+        'right': 0
+    },
+offset=0,
+width=12
+%}
+  {% dnd_row 
+   padding={
+        'top': 0,
+        'bottom': 0,
+        'left': 0,
+        'right': 0
+    },
+  %}
+  {% dnd_module path='../../modules/footer-copyright' label='footer-copyright' %}
+  {% end_dnd_module %}
+  {% end_dnd_row %}
+  {% end_dnd_column %}
+  {% end_dnd_section %}
+    
+  {% end_dnd_area %}
+
+  {# Top dnd bottom footer drag and drop area #}
+  {% if theme.layout_setting.header.enable_bottom_footer == true %}
+  {% dnd_area 'dnd-bottom-footer' label='Bottom dnd footer' class="footer-dnd-area3 content-wrapper" %}
+  {% end_dnd_area %}
+  {% endif %}
+  {# End dnd bottom footer drag and drop area #}
+</footer>

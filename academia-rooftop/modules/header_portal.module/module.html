@@ -1,0 +1,190 @@
+
+{% set contact_id = request.contact.contact_vid %}
+<!--133645175296  -->
+
+{% if request_contact.is_logged_in %}
+
+  {% set membership_contact = crm_object('contact', contact_id, 'firstname,lastname,email,foto_de_perfil') %}
+  
+  {% if request_contact.is_logged_in  %}
+    {# Pegando dados do contato logado #}
+    {% set contact_nome = membership_contact.firstname %}
+    {% set contact_sobrenome = membership_contact.lastname %}
+    {% set contact_email = membership_contact.email %}
+{#     {% set contact_imagem = request.contact %} #}
+  {% else %}
+    {% set contact_nome = 'Logar' %}
+    {% set contact_sobrenome = '' %}
+    {% set contact_email = 'contato@rooftop.com.br' %}
+    {% set contact_imagem = 'https://rooftopbr.nyc3.cdn.digitaloceanspaces.com/portal/images/avatar_placeholder.png' %}
+  {% endif %}
+
+  <section id="header" data-custom="dashboard-header">
+    <nav class="bg-blue-800">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <div class="flex items-center">
+            <div class="shrink-0">
+              <a href="/negocios" aria-label="Negócios">
+                <img src="{{ module.image_field.src }}" alt="Rooftop Investimentos" class="h-10" />
+              </a>
+            </div>
+            <div class="sm:hidden md:block">
+              <div class="ml-10 flex items-baseline space-x-4">
+                {% for item in module.grupo_de_link %}
+                <a href="{{ item.link_href }}" {% if item.link_ancora %}data-ancora="{{ item.link_ancora }}"{% endif %} class="rounded-md px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 hover:text-white {% if item.is_current %}bg-blue-900 text-white{% endif %}">{{ item.link_label }}</a>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="sm:hidden md:block">
+            <div class="ml-4 flex items-center md:ml-6">
+              <!-- <button type="button" class="relative rounded-full bg-blue-800 p-1 text-white hover:text-blue-200 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-800 focus:outline-hidden">
+                <span class="absolute -inset-1.5"></span>
+                <span class="sr-only">View notifications</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6">
+                  <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button> -->
+
+              <!-- Profile dropdown -->
+              <div class="relative ml-3">
+                <div>
+                  <button id="user-menu-button" type="button" aria-expanded="false" aria-haspopup="true" class="relative flex max-w-xs items-center rounded-full bg-blue-800 text-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-800">
+                    <span class="absolute -inset-1.5"></span>
+                    <span class="sr-only">Open user menu</span>
+                    <img src="https://rooftopbr.nyc3.cdn.digitaloceanspaces.com/portal/images/avatar_placeholder.png" alt="" class="size-8 rounded-full" />
+                  </button>
+                </div>
+
+                <!-- Avatar dropdown menu -->
+                <div id="user-menu-dropdown" class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+                  <a href="/perfil" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Perfil</a>
+                  {# <a href="/configuracoes" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Configurações</a> #}
+                  <a href="/_hcms/mem/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem" tabindex="-1">Sair</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="-mr-2 flex md:hidden">
+            <!-- Mobile menu button -->
+            <button id="mobile-menu-button" type="button" aria-controls="mobile-menu" aria-expanded="false" class="relative inline-flex items-center justify-center rounded-md bg-blue-800 p-2 text-white hover:bg-blue-700 hover:text-white focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-800 focus:outline-hidden">
+              <span class="absolute -inset-0.5"></span>
+              <span class="sr-only">Open main menu</span>
+              <svg id="menu-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="block size-6">
+                <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <svg id="menu-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="hidden size-6">
+                <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile menu, show/hide based on menu state. -->
+      <div id="mobile-menu" class="hidden md:hidden">
+        <!-- Main navigation links -->
+        <div class="space-y-1 px-2 pt-2 pb-3 sm:px-3">
+          {% for item in module.grupo_de_link %}
+          <a href="{{ item.link_href }}" {% if item.link_ancora %}data-ancora="{{ item.link_ancora }}"{% endif %} class="block rounded-md px-3 py-2 text-base font-medium text-white hover:bg-blue-700 hover:text-white {% if item.is_current %}bg-blue-900 text-white{% endif %}">{{ item.link_label }}</a>
+          {% endfor %}
+        </div>
+        
+        <!-- Separator and profile links -->
+        <div class="border-t border-blue-700 pt-3 pb-3">
+          <div class="space-y-1 px-2">
+            {% if module.grupo_de_links_perfil %}
+              {% for profile_item in module.grupo_de_links_perfil %}
+                <a href="{{ profile_item.link_href }}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-blue-700 hover:text-white">{{ profile_item.link_label }}</a>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </nav>
+  </section>
+  
+  <!-- JavaScript do Header Portal -->
+  <script>
+    // Make contact data available globally for profile photo loading
+    window.membership_contact = {{ membership_contact|tojson }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Header Portal Module JS Carregado (inline)');
+      
+      // Mobile Menu Toggle
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const menuIconOpen = document.getElementById('menu-icon-open');
+      const menuIconClose = document.getElementById('menu-icon-close');
+
+      console.log('Elementos encontrados:');
+      console.log('- mobileMenuButton:', mobileMenuButton);
+      console.log('- mobileMenu:', mobileMenu);
+      console.log('- menuIconOpen:', menuIconOpen);
+      console.log('- menuIconClose:', menuIconClose);
+
+      // Mobile Menu Functionality
+      if (mobileMenuButton && mobileMenu) {
+        console.log('Event listener adicionado ao botão mobile menu');
+        mobileMenuButton.addEventListener('click', function() {
+          console.log('Clique detectado no botão mobile menu');
+          const isExpanded = mobileMenuButton.getAttribute('aria-expanded') === 'true';
+          console.log('Estado atual aria-expanded:', isExpanded);
+          
+          if (isExpanded) {
+            // Close mobile menu
+            console.log('Fechando menu mobile');
+            mobileMenu.classList.add('hidden');
+            mobileMenuButton.setAttribute('aria-expanded', 'false');
+            
+            // Switch icons
+            if (menuIconOpen) menuIconOpen.classList.remove('hidden');
+            if (menuIconClose) menuIconClose.classList.add('hidden');
+            
+            // Enable body scroll
+            document.body.classList.remove('no-scroll');
+          } else {
+            // Open mobile menu
+            console.log('Abrindo menu mobile');
+            mobileMenu.classList.remove('hidden');
+            mobileMenuButton.setAttribute('aria-expanded', 'true');
+            
+            // Switch icons
+            if (menuIconOpen) menuIconOpen.classList.add('hidden');
+            if (menuIconClose) menuIconClose.classList.remove('hidden');
+            
+            // Disable body scroll
+            document.body.classList.add('no-scroll');
+          }
+        });
+
+        // Close mobile menu when clicking on menu links
+        const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+        mobileMenuLinks.forEach(link => {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.add('hidden');
+            mobileMenuButton.setAttribute('aria-expanded', 'false');
+            
+            // Switch icons back
+            if (menuIconOpen) menuIconOpen.classList.remove('hidden');
+            if (menuIconClose) menuIconClose.classList.add('hidden');
+            
+            // Enable body scroll
+            document.body.classList.remove('no-scroll');
+          });
+        });
+      } else {
+        console.error('Elementos do menu mobile não encontrados!', {
+          mobileMenuButton: mobileMenuButton,
+          mobileMenu: mobileMenu
+        });
+      }
+    });
+  </script>
+  
+  {% else %}
+  
+
+{% endif %}

@@ -1,0 +1,1 @@
+console.log('Check do tema principal')

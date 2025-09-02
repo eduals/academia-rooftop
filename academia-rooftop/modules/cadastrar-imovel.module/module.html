@@ -1,0 +1,369 @@
+{# Página de Cadastro de Imóvel - Portal Rooftop #}
+{% if request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid %}
+{% else %}
+  {% set contact_id = 133645175296 %}
+{% endif %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Imóvel - Portal Rooftop</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { background-color: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: all 0.2s ease-in-out; cursor: pointer; }
+        .btn-primary { background-color: #2563eb; color: white; border: 1px solid transparent; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .btn-secondary { background-color: white; color: #475569; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background-color: #f8fafc; }
+        .btn-icon { padding: 0.5rem; }
+        .btn-ghost { background-color: transparent; color: #64748b; border: none; }
+        .btn-ghost:hover { background-color: #f1f5f9; color: #334155; }
+        .form-input, .form-select, .form-textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; transition: all 0.2s ease-in-out; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+        .form-textarea { min-height: 100px; resize: vertical; }
+        .required::after { content: ' *'; color: #ef4444; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; }
+        .form-section { margin-bottom: 2rem; }
+        .form-section-title { font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb; }
+        .currency-input { position: relative; }
+        .currency-input::before { content: 'R$'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 0.875rem; pointer-events: none; }
+        .currency-input input { padding-left: 2.5rem; }
+        .radio-group { display: flex; gap: 1rem; align-items: center; }
+        .radio-item { display: flex; align-items: center; gap: 0.5rem; }
+        .radio-item input[type="radio"] { margin: 0; }
+    </style>
+</head>
+<body>
+  <section data-module="cadastrarImovelModule" class="cadastrar-imovel-module max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center space-x-4">
+        <button onclick="window.history.back()" class="btn btn-ghost btn-icon">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+        </button>
+        <h1 class="text-3xl font-bold text-slate-900">Cadastrar Imóvel</h1>
+      </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card p-8">
+      <div id="cadastrar-imovel-form">
+        
+        <!-- Informações Cadastrais do Cliente -->
+        <div class="form-section">
+          <h2 class="form-section-title">Informações Cadastrais do Cliente</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+              <label for="nome_cliente" class="form-label required">Nome</label>
+              <input 
+                type="text" 
+                id="nome_cliente" 
+                name="nome_cliente" 
+                class="form-input" 
+                placeholder="Digite o nome completo do cliente"
+                required
+              >
+            </div>
+            
+            <div class="form-group">
+              <label for="email_cliente" class="form-label">E-mail do cliente</label>
+              <input 
+                type="email" 
+                id="email_cliente" 
+                name="email_cliente" 
+                class="form-input" 
+                placeholder="melhor-email@dominio.com.br"
+              >
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+              <label for="telefone_cliente" class="form-label">Número de telefone</label>
+              <input 
+                type="tel" 
+                id="telefone_cliente" 
+                name="telefone_cliente" 
+                class="form-input" 
+                placeholder="(11) 99999-9999"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="cpf_cliente" class="form-label">CPF</label>
+              <input 
+                type="text" 
+                id="cpf_cliente" 
+                name="cpf_cliente" 
+                class="form-input" 
+                placeholder="000.000.000-00"
+                maxlength="14"
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="principal_objetivo" class="form-label required">Qual o principal objetivo do cliente?</label>
+            <select id="principal_objetivo" name="principal_objetivo" class="form-select" required>
+              <option value="">Selecione</option>
+              <option value="quero_investir_em_minha_empresa_usando_meu_imovel">Quero investir em minha empresa</option>
+              <option value="quero_quitar_as_dividas_usando_meu_imovel">Quero quitar as dívidas usando meu imóvel</option>
+              <option value="quero_somente_vender_meu_imovel">Quero somente vender meu imóvel</option>
+              <option value="tenho_outros_objetivos_financeiros">Tenho outros objetivos financeiros</option>
+              <option value="quero_comprar_imoveis_rooftop">Quero comprar imóveis Rooftop</option>
+              <option value="Quero reduzir o valor da minha dívida">Quero reduzir o valor da minha dívida</option>
+              <option value="Quero regularizar pendências jurídicas">Quero regularizar pendências jurídicas</option>
+            </select>
+          </div>
+          
+          <!-- <div class="form-group">
+            <label for="motivo_interesse" class="form-label">Motivo do interesse do seu Cliente</label>
+            <textarea 
+              id="motivo_interesse" 
+              name="motivo_interesse" 
+              class="form-textarea" 
+              placeholder="Descreva o motivo do interesse do cliente..."
+            ></textarea>
+          </div> -->
+        </div>
+
+        <!-- Localização do Imóvel -->
+        <div class="form-section">
+          <h2 class="form-section-title">Localização do Imóvel do Cliente</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+              <label for="tipo_imovel" class="form-label">Tipo de imóvel</label>
+              <select id="tipo_imovel" name="tipo_imovel" class="form-select">
+                <option value="">Selecione</option>
+                <option value="Apartamento">Apartamento</option>
+                <option value="Apartamento Duplex">Apartamento Duplex</option>
+                <option value="Apartamento Cobertura">Apartamento Cobertura</option>
+                <option value="Casa">Casa de Rua</option>
+                <option value="Casa em Condomínio">Casa em Condomínio</option>
+                <option value="Terreno">Terreno</option>
+                <option value="Sala Comercial">Sala Comercial</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="cep" class="form-label">CEP</label>
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="cep" 
+                  name="cep" 
+                  class="form-input" 
+                  placeholder="00000-000"
+                  maxlength="9"
+                >
+                <div id="cep-status" class="absolute right-3 top-1/2 transform -translate-y-1/2" style="display: none;">
+                  <!-- Loading spinner -->
+                  <svg id="cep-loading" class="w-4 h-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24" style="display: none;">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <!-- Success icon -->
+                  <svg id="cep-success" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <!-- Error icon -->
+                  <svg id="cep-error" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </div>
+              </div>
+              <div id="cep-message" class="text-sm mt-1" style="display: none;"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="endereco" class="form-label">Endereço</label>
+            <input 
+              type="text" 
+              id="endereco" 
+              name="endereco" 
+              class="form-input" 
+              placeholder="Digite o endereço completo"
+            >
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="form-group">
+              <label for="numero" class="form-label">Número</label>
+              <input 
+                type="text" 
+                id="numero" 
+                name="numero" 
+                class="form-input" 
+                placeholder="123"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="complemento" class="form-label">Complemento</label>
+              <input 
+                type="text" 
+                id="complemento" 
+                name="complemento" 
+                class="form-input" 
+                placeholder="Apto 45, Bloco B"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="cidade" class="form-label">Cidade</label>
+              <input 
+                type="text" 
+                id="cidade" 
+                name="cidade" 
+                class="form-input" 
+                placeholder="São Paulo"
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="estado" class="form-label">Estado/Região</label>
+            <select id="estado" name="estado" class="form-select">
+              <option value="">Selecione</option>
+              <option value="AC">Acre</option>
+              <option value="AL">Alagoas</option>
+              <option value="AP">Amapá</option>
+              <option value="AM">Amazonas</option>
+              <option value="BA">Bahia</option>
+              <option value="CE">Ceará</option>
+              <option value="DF">Distrito Federal</option>
+              <option value="ES">Espírito Santo</option>
+              <option value="GO">Goiás</option>
+              <option value="MA">Maranhão</option>
+              <option value="MT">Mato Grosso</option>
+              <option value="MS">Mato Grosso do Sul</option>
+              <option value="MG">Minas Gerais</option>
+              <option value="PA">Pará</option>
+              <option value="PB">Paraíba</option>
+              <option value="PR">Paraná</option>
+              <option value="PE">Pernambuco</option>
+              <option value="PI">Piauí</option>
+              <option value="RJ">Rio de Janeiro</option>
+              <option value="RN">Rio Grande do Norte</option>
+              <option value="RS">Rio Grande do Sul</option>
+              <option value="RO">Rondônia</option>
+              <option value="RR">Roraima</option>
+              <option value="SC">Santa Catarina</option>
+              <option value="SP">São Paulo</option>
+              <option value="SE">Sergipe</option>
+              <option value="TO">Tocantins</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Informações Complementares -->
+        <div class="form-section">
+          <h2 class="form-section-title">Informações Complementares da Oportunidade</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+              <label for="valor_imovel" class="form-label required">Valor do imóvel</label>
+              <select id="valor_imovel" name="valor_imovel" class="form-select" required>
+                <option value="">Selecione</option>
+                <option value="Abaixo de R$ 500 mil">Abaixo de R$ 500 mil</option>
+                <option value="De R$ 501 mil a R$ 800 mil">De R$ 501 mil a R$ 800 mil</option>
+                <option value="De R$ 801 mil a R$ 1 milhão">De R$ 801 mil a R$ 1 milhão</option>
+                <option value="De R$ 1 milhão a R$ 3 milhões">De R$ 1 milhão a R$ 3 milhões</option>
+                <option value="De R$ 3 milhões a R$ 6 milhões">De R$ 3 milhões a R$ 6 milhões</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">O imóvel possui dívidas?</label>
+              <div class="radio-group">
+                <div class="radio-item">
+                  <input type="radio" id="dividas_sim" name="possui_dividas" value="Sim" required>
+                  <label for="dividas_sim">Sim</label>
+                </div>
+                <div class="radio-item">
+                  <input type="radio" id="dividas_nao" name="possui_dividas" value="Não" required>
+                  <label for="dividas_nao">Não</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" id="valor_dividas_group" style="display: none;">
+            <label for="valor_dividas" class="form-label">Qual o valor das dívidas?</label>
+            <div class="currency-input">
+              <input 
+                type="text" 
+                id="valor_dividas" 
+                name="valor_dividas" 
+                class="form-input" 
+                placeholder="0,00"
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="descricao_oportunidade" class="form-label required">Descreva a oportunidade e necessidade do cliente com detalhe</label>
+            <textarea 
+              id="descricao_oportunidade" 
+              name="descricao_oportunidade" 
+              class="form-textarea" 
+              style="min-height: 120px;"
+              placeholder="Descreva em detalhes a oportunidade, necessidades específicas do cliente, urgência, contexto da negociação, etc..."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-3 space-y-3 sm:space-y-0 pt-6 border-t border-slate-200">
+          <button 
+            type="button" 
+            onclick="window.history.back()" 
+            class="btn btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-primary"
+            id="submit-btn"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Cadastrar Imóvel
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <script>
+    window.cadastrarImovelData = {
+      contactId: {{ contact_id|tojson }},
+      webhookUrl: 'https://n8n2.rooftop.com.br/webhook/portal/cadastrar-imovel',
+      timestamp: new Date().toISOString()
+    };
+  </script>
+</body>
+</html>

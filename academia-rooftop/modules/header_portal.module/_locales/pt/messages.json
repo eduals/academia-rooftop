@@ -1,0 +1,422 @@
+{
+  "bot_o.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.default" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.label" : {
+    "message" : "href",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.href.validation_regex" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.label" : {
+    "message" : "Botão",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.default" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.label" : {
+    "message" : "Nome",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.nome.validation_regex" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "bot_o.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.label" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.default" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.label" : {
+    "message" : "ancora",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_ancora.validation_regex" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.default" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.label" : {
+    "message" : "href",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_href.validation_regex" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.default" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.label" : {
+    "message" : "Label",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.link_label.validation_regex" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_link.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.label" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.label" : {
+    "message" : "ancora",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_ancora.validation_regex" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.label" : {
+    "message" : "href",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_href.validation_regex" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.label" : {
+    "message" : "Label",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.link_label.validation_regex" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "grupo_de_links_perfil.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "image_field.default.alt" : {
+    "message" : "logo-1",
+    "description" : "",
+    "placeholders" : null
+  },
+  "image_field.help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "image_field.inline_help_text" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "image_field.label" : {
+    "message" : "Imagem",
+    "description" : "",
+    "placeholders" : null
+  },
+  "image_field.placeholder" : {
+    "message" : "",
+    "description" : "",
+    "placeholders" : null
+  },
+  "name" : {
+    "message" : "header_portal",
+    "description" : "",
+    "placeholders" : null
+  },
+  "perfil_links.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.label" : {
+    "message" : "perfil_links",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.label" : {
+    "message" : "link_href",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_href.validation_regex" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.default" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.inline_help_text" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.label" : {
+    "message" : "link_label",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.link_label.validation_regex" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  },
+  "perfil_links.placeholder" : {
+    "message" : "",
+    "description" : null,
+    "placeholders" : null
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "label" : "academia-rooftop",
+  "preview_path" : "./templates/homepage-one.html",
+  "screenshot_path" : "./images/theme-preview/theme-preview.png",
+  "enable_domain_stylesheets" : false,
+  "is_available_for_new_content" : true,
+  "extends" : "@marketplace/MakeWebBetter/Academia",
+  "responsive_breakpoints" : [ {
+    "mediaQuery" : "@media (max-width: 992px)",
+    "messages" : { },
+    "name" : "mobile",
+    "previewWidth" : {
+      "units" : "px",
+      "value" : 520
+    }
+  } ],
+  "version" : "25",
+  "author" : {
+    "name" : "",
+    "email" : ""
+  },
+  "hide_all_default_modules" : false
+}

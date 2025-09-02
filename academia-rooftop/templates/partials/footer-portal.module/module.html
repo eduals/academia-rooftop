@@ -1,0 +1,202 @@
+<footer class="homecase-footer">
+  <section class="homecase-footer-container">
+    <div class="homecase-footer-logo">
+      <img width="168" height="38" src="https://mkt.rooftop.com.br/hubfs/logo-white.svg" loading="lazy" alt="">
+    </div>
+    <div class="socials-mobile">
+      <div class="homecase-footer-content-socials no-desktop">
+        <ul>
+          {% for item in module.redes_sociais_grupo_de_links %}
+          <li>
+            <a href="{{ item.link_href }}" target="_blank" aria-label="rede social">
+              <img src="{{item.link_img.src}}" loading="lazy" width="32" height="32" alt="">
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="homecase-footer-content">
+      <div class="width-33 order2">
+        <p>© 2022 Rooftop. Todos os direitos reservados.</p>
+        <p>ROOFTOP TECNOLOGIA DE ATIVOS S.A</p>
+        <div class="homecase-footer-content-mg">
+          <p>CRECI: 40254-J</p>
+          <p>CNPJ: 37.209.138/0001-05</p>
+        </div>
+        <p>Dr. Geraldo Campos Moreira, 375, São Paulo - SP</p>
+      </div>
+      <div class="width-33 order1">
+        <div class="homecase-footer-content-item">
+          <h2>ROOFTOP</h2>
+          {% for item in module.rooftop_grupo_de_links %}
+
+          {% if item.link_tipo %}
+          <a href="{{ item.link_href }}" target="_blank">{{ item.link_label }}</a>
+          {% else %}
+            {% if item.link_ancora %}
+             <a data-ancora="{{ item.link_ancora }}" href="{{ item.link_href }}">{{ item.link_label }}</a>
+            {% else %}
+             <a href="{{ item.link_href }}">{{ item.link_label }}</a>
+            {% endif %}
+          {% endif %}
+          
+          {% endfor %}
+        </div>
+        <div class="homecase-footer-content-item">
+          <h2>CONTATO</h2>
+          {% for item in module.contato_grupo_de_links %}
+          <a href="{{ item.link_href }}" target="_blank">{{ item.link_label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="width-33 order1">
+        <div class="homecase-footer-content-item">
+          <h2>SAIBA MAIS</h2>
+          {% for item in module.saiba_mais_grupo_de_links %}
+
+          {% if item.link_tipo %}
+          <a href="{{ item.link_href }}" target="_blank">{{ item.link_label }}</a>
+          {% else %}
+            {% if item.link_ancora %}
+             <a data-ancora="{{ item.link_ancora }}" href="{{ item.link_href }}">{{ item.link_label }}</a>
+            {% else %}
+             <a href="{{ item.link_href }}">{{ item.link_label }}</a>
+            {% endif %}
+          {% endif %}
+          
+          {% endfor %}
+        </div>
+        <div class="homecase-footer-content-socials no-mobile">
+          <ul>
+            {% for item in module.redes_sociais_grupo_de_links %}
+            <li>
+              <a href="{{ item.link_href }}" target="_blank" aria-label="rede social">
+                <img src="{{item.link_img.src}}" loading="lazy" width="32" height="32" alt="">
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</footer>
+
+<style>
+  .homecase-footer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background-color: #1E203F;
+    box-sizing: border-box;
+    padding: 80px 20px;
+  }
+
+  .homecase-footer a, .homecase-footer p, 
+  .homecase-footer a, .homecase-footer a {
+    font-family: Excon;
+    color: #FFF;
+    font-weight: 400;
+    margin-bottom: 8px;
+    display: block;
+    transition: .2s all;
+  }
+
+  .homecase-footer a, .homecase-footer p {
+    font-size: 16px;
+  }
+
+  .homecase-footer a {
+    font-size: 18px;
+    text-decoration: none;
+  }
+  .homecase-footer a:hover {
+    color: #ababab;
+  }
+
+  .homecase-footer .homecase-footer-container {
+    width: 100%;
+    max-width: 1240px;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-logo {
+    margin-bottom: 48px;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-content {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-content .width-33 {
+    width: 100%;
+  }
+
+  .homecase-footer-content-mg {
+    margin: 20px 0;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-content h2 {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    color: #CBD6F4;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-content-item {
+    margin-bottom: 50px;
+  }
+
+  .homecase-footer .homecase-footer-container .homecase-footer-content-socials ul{
+    list-style: none;
+    padding-inline-start: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .order1 {
+      order: 1;
+    }
+
+    .order2 {
+      order: 2;
+    }
+
+    .no-mobile {
+      display: none;
+    }
+
+    .socials-mobile {
+      margin-bottom: 60px;
+    }
+  }
+
+  @media (min-width: 768px){
+    .no-desktop {
+      display: none;
+    }
+
+    .homecase-footer {
+      padding: 80px 0;
+    }
+
+    .homecase-footer .homecase-footer-container .homecase-footer-content .width-33 {
+      width: 33.33%;
+    }
+
+    .homecase-footer-content-mg {
+      margin: 72px 0 38px;
+    }
+
+    .homecase-footer .homecase-footer-container .homecase-footer-content-item {
+      margin-bottom: 42px;
+    }
+  }
+</style>

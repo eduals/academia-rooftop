@@ -1,0 +1,35 @@
+<!--
+templateType: search_results_page
+isAvailableForNewContent: true
+label: Academia - Search Results
+screenshotPath: ../../images/template-previews/search-results.png
+-->
+{% set template_css = '../../css/templates/system.css' %}
+{% extends '../layouts/base.html' %}
+{# pageTitle is used on system templates for setting a value for the title tag #}
+{% set pageTitle = "Resultados da busca" %}
+
+{% block body %}
+<section class="content-wrapper search-results search-results-wrap">
+  <div class="search-results__input">
+    {% module_block module 'search_input'
+      label='Search input',
+      path='@hubspot/search_input'
+    %}
+    {% end_module_block %}
+  </div>
+  <div class="systems-page--search-results">
+    {% module_block module 'search_results_content'
+      label='Search results heading',
+      path='@hubspot/rich_text'
+    %}
+    {% module_attribute 'html' %}
+    <h4 class="ac-search__keyword">Resultados para <span>"{{ request.query_dict.term|escape }}"</span></h4>
+    {% end_module_attribute %}
+    {% end_module_block %}
+    {% module 'search_results'
+      path='@hubspot/search_results'
+    %}
+  </div>
+</section>
+{% endblock body %}

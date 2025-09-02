@@ -1,0 +1,18 @@
+{
+  "global" : false,
+  "content_types" : [ "LANDING_PAGE", "SITE_PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "js_render_options" : {
+    "position" : "footer",
+    "async" : true,
+    "defer" : true
+  },
+  "css_render_options" : {
+    "async" : true
+  },
+  "categories" : [ "FUNCTIONALITY" ],
+  "host_template_types" : [ "PAGE", "BLOG_POST", "BLOG_LISTING" ],
+  "module_id" : 192700490034,
+  "label" : "Header Navigation",
+  "icon" : "https://f.hubspotusercontent10.net/hubfs/19956213/academia/module-icons/menu.svg",
+  "is_available_for_new_content" : true
+}

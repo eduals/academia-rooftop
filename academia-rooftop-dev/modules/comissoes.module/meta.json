@@ -1,0 +1,14 @@
+{
+  "global" : true,
+  "content_types" : [ "MEMBERSHIP", "SITE_PAGE", "CUSTOMER_PORTAL" ],
+  "smart_type" : "NOT_SMART",
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST", "MEMBERSHIP" ],
+  "module_id" : 192911780738,
+  "css_assets" : [ {
+    "autoload" : true,
+    "path" : "module.css",
+    "name" : "module.css"
+  } ],
+  "label" : "Módulo de Comissões",
+  "is_available_for_new_content" : true
+}

@@ -1,0 +1,129 @@
+<!--
+templateType: blog_listing
+isAvailableForNewContent: true
+label: Academia - Blog listing
+screenshotPath: ../../images/template-previews/blog-listing.png
+-->
+{% extends '../layouts/base.html' %}
+
+{% block body %}
+
+  {% dnd_area 'dnd_area' class='body-container body-container--blog-listing-one', label='Main section' %}
+<!--  Banner  -->
+{% dnd_section
+ full_width=true,
+  padding={
+    "default" : {
+      "bottom" : "0px",
+      "left" : "0px",
+      "right" : "0px",
+      "top" : "0px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12,
+    padding={
+      "default" : {
+        "bottom" : "0px",
+        "left" : "0px",
+        "right" : "0px",
+        "top" : "0px"
+      }
+    }
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../../modules/banner-layouts",
+        offset=0,
+        width=12,
+        banner_content={
+          "content" : "<h1>Stay up to date and learn new things</h1>",
+          "subtitle" : "Our Blog"
+        },
+        banner_layouts_choice={
+          "banner_layouts" : "background_image"
+        },
+        breadcrumb={
+          "breadcrumb" : {
+            "current" : {
+              "current_page" : "Blog"
+            }
+          }
+        },
+        button_breadcrumb_choice={
+          "select_actions" : "breadcrumb"
+        },
+        style={
+          "background_image" : {
+            "image" : {
+              "alt" : "Blog Banner",
+              "height" : 482,
+              "loading" : "lazy",
+              "max_height" : 482,
+              "max_width" : 1366,
+              "size_type" : "exact",
+              "src" : get_asset_url('../../images/multipurpose/blog-banner.png'),
+              "width" : 1366
+            }
+          },
+          "breadcrumb" : {
+            "overwrite_color" : true
+          },
+          "content_color" : {
+            "heading" : {
+              "enable_heading_color" : true
+            },
+            "subtitle" : {
+              "overwrite_style" : true
+            }
+          },
+          "max_width" : {
+            "enable" : true
+          }
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+  
+{# Blog Listing #}
+  {% dnd_section
+      vertical_alignment='TOP',
+      padding={
+        'top': '0',
+        'bottom': '0',
+        'left': '0',
+        'right': '0'
+      }
+  %}
+    {% dnd_column
+        padding={
+          'top': 0,
+          'right': 0,
+          'bottom': 0,
+          'left': 0
+      },
+    %}
+      {% dnd_row
+            padding={
+              'top': 0,
+              'right': 0,
+              'bottom': 0,
+              'left': 0
+        },
+        %}
+      {% dnd_module
+              path='../../modules/blog-listings', 
+              "blog_description_visibility_condition" = true,
+          %}
+      {% end_dnd_module %}
+      {% end_dnd_row %}
+
+    {% end_dnd_column %}
+  {% end_dnd_section %}
+  {# End Of Blog Listing #}
+  {% end_dnd_area %}
+{% endblock body %}

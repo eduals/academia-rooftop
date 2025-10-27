@@ -1,0 +1,149 @@
+<!--
+templateType: blog_post
+isAvailableForNewContent: true
+label: Academia - Blog Post
+screenshotPath: ../../images/template-previews/blog-detail.png
+-->
+{% set template_css = '../../css/templates/blog.css' %}
+{% extends '../layouts/base.html' %}
+
+{% block body %}
+<div class="body-container body-container--blog-post">
+
+  {# Blog post #}
+
+  <article class="blog-post-wrap">
+    <div class="content-wrapper">
+      <div class="blog-post__header">
+        <div class="blog-post">
+          {% if theme.blog_setting.blog_post.show_hide_tags.enable %}
+          {% if content.tag_list %}
+          <div class="blog-post__tags">
+            {% for tag in content.tag_list %}
+            <a class="blog-post__tag-link ac-button--outlined" href="{{ blog_tag_url(group.id, tag.slug) }}" rel="tag">{{ tag.name }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endif %}
+          <h1 class="blog-post__title">{{ content.name }}</h1>
+          <div class="blog-post__meta">
+            {% if theme.blog_setting.blog_post.show_hide_author_image.enable && content.blog_post_author.slug %}
+            <div class="blog-post__meta-avatar">
+              <a href="{{ blog_author_url(group.id, content.blog_post_author.slug) }}" rel="author">
+                <img src="{{ content.blog_post_author.avatar }}" alt="{{ content.blog_post_author.display_name }}" height="50" width="50" loading="lazy">
+              </a>
+            </div>
+            {% endif %}
+            <div class="blog-post__meta-time">
+              {% if theme.blog_setting.blog_post.show_hide_author_name.enable && content.blog_post_author.slug %}
+              <a href="{{ blog_author_url(group.id, content.blog_post_author.slug) }}" rel="author">
+                {{ content.blog_post_author.display_name }}
+              </a>
+              {% endif %}
+
+              {% if theme.blog_setting.blog_post.show_hide_timestamp.enable %}
+              <time datetime="{{ content.publish_date }}" class="blog-post__timestamp">
+               {{ content.publish_date | format_date('dd MMMM, yyyy') }}
+              </time>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% if content.featured_image %}
+    <div class="blog-post__featured-img {% if theme.blog_setting.blog_post.feature_image.feature_image_effect.choice == 'fixed' %} ac-blog-post--featured-img-fixed {% endif %}{% if theme.blog_setting.blog_post.feature_image.feature_image_effect.choice == 'scroll' %} ac-blog-post--featured-img-scroll{% endif %} {% if theme.blog_setting.blog_post.feature_image.feature_image_position.choice == 'top' %} ac-blog-post--featured-img-top {% endif %}{% if theme.blog_setting.blog_post.feature_image.feature_image_position.choice == 'center' %} ac-blog-post--featured-img-center{% endif %}{% if theme.blog_setting.blog_post.feature_image.feature_image_position.choice == 'bottom' %} ac-blog-post--featured-img-bottom{% endif %}" style="background-image: url({{ content.featured_image }});">
+    </div>
+    <div class="blog-post__featured-img--mobile">
+      <img src="{{ content.featured_image }}" alt="{{ content.featured_image_alt_text }}" loading="Eager">
+    </div>
+    {% endif %}
+    <div class="content-wrapper">
+      <div class="blog-post ac-blog-post {% if theme.blog_setting.sidebar.enable_blog_sidebar %}ac-blog-post--sidebar{% endif %} {% if theme.blog_setting.sidebar.sidebar_option.sidebar_position.choice == 'left' %}ac-blog-post--sidebar-left{% endif %} {% if group.show_social_link_twitter || group.show_social_link_facebook || group.show_social_link_linkedin %}blog-post--social-link{% endif %}">
+        {% if group.show_social_link_twitter || group.show_social_link_facebook || group.show_social_link_linkedin %}
+        <div class="blog-post__social-sharing">
+          <div class="social-links">
+            {% if group.show_social_link_twitter %}
+            <a href="https://twitter.com/intent/tweet?text=I+found+this+interesting+blog+post&url={{ content.absolute_url }}" target="_blank" rel="noopener" class="social-links__icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M28.3199 8.35836C27.3973 8.76708 26.4186 9.03523 25.4166 9.15388C26.4721 8.52233 27.2619 7.52853 27.639 6.35772C26.6468 6.94669 25.5612 7.36143 24.429 7.58396C23.956 7.07945 23.3845 6.67746 22.7497 6.4029C22.115 6.12834 21.4307 5.98705 20.7391 5.9878C17.9474 5.9878 15.6838 8.25084 15.6838 11.0432C15.6838 11.439 15.7286 11.8252 15.815 12.1955C11.6134 11.9846 7.88856 9.9718 5.39512 6.91292C4.94554 7.68446 4.7093 8.56171 4.71064 9.45468C4.70997 10.287 4.91492 11.1066 5.30726 11.8406C5.6996 12.5747 6.26719 13.2005 6.9596 13.6624C6.15694 13.6369 5.37197 13.4201 4.67 13.03C4.66936 13.0512 4.66936 13.072 4.66936 13.0937C4.66936 15.5424 6.41176 17.5856 8.72408 18.0505C7.97952 18.2521 7.19886 18.2816 6.4412 18.1369C7.0844 20.1449 8.95128 21.607 11.1634 21.648C9.37269 23.0533 7.16136 23.8155 4.88504 23.8121C4.47704 23.8121 4.0748 23.7884 3.67896 23.7414C5.99042 25.2266 8.6806 26.0149 11.4281 26.0121C20.7266 26.0121 25.8114 18.3094 25.8114 11.6297C25.8114 11.4108 25.8063 11.1923 25.7967 10.975C26.787 10.2601 27.6415 9.37394 28.3199 8.35836Z" fill="#6E41E2"/>
+              </svg>
+            </a>
+            {% endif %}
+            {% if group.show_social_link_facebook %}
+            <a href="http://www.facebook.com/share.php?u={{ content.absolute_url }}" target="_blank" rel="noopener" class="social-links__icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M26.2483 4.47998H5.75166C5.41439 4.47998 5.09093 4.61396 4.85245 4.85245C4.61396 5.09093 4.47998 5.41439 4.47998 5.75166V26.2486C4.48007 26.5858 4.61408 26.9092 4.85256 27.1476C5.09104 27.386 5.41445 27.52 5.75166 27.52H16.7862V18.5977H13.7837V15.1206H16.7862V12.5561C16.7862 9.58014 18.6038 7.95998 21.2585 7.95998C22.5302 7.95998 23.623 8.05438 23.9417 8.09694V11.207L22.1005 11.208C20.6566 11.208 20.3773 11.8941 20.3773 12.9008V15.1209H23.8205L23.3721 18.5981H20.3773V27.52H26.2486C26.5858 27.5199 26.9092 27.3859 27.1476 27.1474C27.386 26.9089 27.52 26.5855 27.52 26.2483V5.75166C27.52 5.41439 27.386 5.09093 27.1475 4.85245C26.909 4.61396 26.5856 4.47998 26.2483 4.47998Z" fill="#6E41E2"/>
+              </svg>
+            </a>
+            {% endif %}
+            {% if group.show_social_link_linkedin %}
+            <a href="http://www.linkedin.com/shareArticle?mini=true&url={{ content.absolute_url }}" target="_blank" rel="noopener" class="social-links__icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M25.8134 4.47998H6.18078C5.2419 4.47998 4.47998 5.22398 4.47998 6.14014V25.8576C4.47998 26.775 5.2419 27.52 6.18078 27.52H25.8134C26.7529 27.52 27.52 26.775 27.52 25.8576V6.14014C27.52 5.22398 26.7529 4.47998 25.8134 4.47998ZM11.3133 24.1133H7.89438V13.1184H11.3133V24.1133ZM9.60382 11.615C9.34359 11.615 9.08591 11.5637 8.84551 11.4641C8.6051 11.3645 8.38668 11.2185 8.20273 11.0344C8.01878 10.8503 7.8729 10.6318 7.77343 10.3914C7.67396 10.1509 7.62285 9.89317 7.62302 9.63294C7.62302 9.10764 7.83169 8.60386 8.20314 8.23242C8.57458 7.86097 9.07836 7.6523 9.60366 7.6523C10.129 7.6523 10.6327 7.86097 11.0042 8.23242C11.3756 8.60386 11.5843 9.10764 11.5843 9.63294C11.5843 10.1583 11.3757 10.6623 11.0043 11.0339C10.633 11.4056 10.1292 11.6146 9.60382 11.615ZM24.112 24.1133H20.6985V18.7667C20.6985 17.4912 20.6736 15.8512 18.9222 15.8512C17.1437 15.8512 16.8726 17.2403 16.8726 18.6742V24.1136H13.4566V13.1184H16.735V14.6198H16.7817C17.2381 13.7558 18.3529 12.8441 20.0157 12.8441C23.4736 12.8441 24.1123 15.1206 24.1123 18.0822V24.1133H24.112Z" fill="#6E41E2"/>
+              </svg>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="blog-post__body">
+          {{ content.post_body }}
+        </div>
+      </div>
+    </div>
+  </article>
+  <div class="pagination-section">
+    <div class="content-wrapper">
+      <div class="blog-post">
+        <div class="post-pagination">
+          <div class="prev-post">
+            {% if content.previous_post_slug %}
+            <div class="nav-text"> 
+              <span>Previous Post</span>
+              <h6><a href="/{{ content.previous_post_slug }}">{{ content.previous_post_name }}</a>
+              </h6>
+            </div>
+            {% endif %}
+          </div>
+          <div class="next-post">
+            {% if content.next_post_slug %}
+            <div class="nav-text">
+              <span>Next Post</span>
+              <h6><a href="/{{ content.next_post_slug }}">{{ content.next_post_name }}</a>
+              </h6>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if theme.blog_setting.blog_post.show_hide_blog_comments.enable %}
+  {% if group.allow_comments %}
+  <div class="content-wrapper">
+    <div class="blog-comments">
+      {% module 'blog_comments'
+            path='@hubspot/blog_comments',
+            label="Blog comments"
+          %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {{group.social_sharing}}
+
+  {# Recent posts listing #}
+</div>
+{# This macro is used to format each recent post card and gets passed to the related_blog_posts HubL tag below #}
+{% if theme.blog_setting.blog_post.show_hide_related_posts.enable %}
+<div class="mwb-blog-related-posts">
+  {% module "blog_related_posts"
+          path="../../modules/blog-related-posts",
+          label="Blog Related Posts"
+        %}
+</div>
+{% endif %}
+{% endblock body %}

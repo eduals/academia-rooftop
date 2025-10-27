@@ -1,0 +1,210 @@
+<!--
+    templateType: page
+    isAvailableForNewContent: true
+-->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    {% if content.html_title %}<title>{{ content.html_title }}</title>{% endif %}
+    <meta name="description" content="{{ content.meta_description }}">
+    {% if brand_settings.primaryFavicon.src %}
+      <link rel="shortcut icon" href="{{ brand_settings.primaryFavicon.src }}" />
+    {% endif %}
+    {{ standard_header_includes }}
+    <style>
+      .thank-you-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem;
+      }
+      
+      .thank-you-card {
+        background: white;
+        border-radius: 16px;
+        padding: 3rem;
+        max-width: 500px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        animation: fadeInUp 0.8s ease-out;
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .success-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 2rem;
+        background: #22c55e;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: bounceIn 1s ease-out 0.3s both;
+      }
+      
+      @keyframes bounceIn {
+        0% {
+          transform: scale(0.3);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        70% {
+          transform: scale(0.9);
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      
+      .success-icon svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+      }
+      
+      .thank-you-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+      }
+      
+      .thank-you-message {
+        color: #6b7280;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+      }
+      
+      .redirect-info {
+        color: #9ca3af;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      .loading-bar {
+        width: 100%;
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+      }
+      
+      .loading-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+        border-radius: 2px;
+        animation: loadingProgress 5s linear forwards;
+      }
+      
+      @keyframes loadingProgress {
+        from {
+          width: 0%;
+        }
+        to {
+          width: 100%;
+        }
+      }
+      
+      .manual-redirect {
+        margin-top: 1rem;
+      }
+      
+      .manual-redirect a {
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
+      
+      .manual-redirect a:hover {
+        color: #1d4ed8;
+      }
+      
+      @media (max-width: 640px) {
+        .thank-you-card {
+          padding: 2rem;
+        }
+        
+        .thank-you-title {
+          font-size: 1.5rem;
+        }
+        
+        .thank-you-message {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {% dnd_area 'dnd_area'
+      label='Main section',
+      class='body-container body-container--homepage-one'
+    %}
+      
+    {% end_dnd_area %}
+    <div class="thank-you-container">
+      <div class="thank-you-card">
+        <div class="success-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+
+        <h1 class="thank-you-title">Sucesso!</h1>
+
+        <p class="thank-you-message">
+          Obrigado! Sua solicitação foi enviada com sucesso.
+        </p>
+
+        <div class="redirect-info">
+          Redirecionando em alguns segundos...
+        </div>
+
+        <div class="loading-bar">
+          <div class="loading-progress"></div>
+        </div>
+
+        <div class="manual-redirect">
+          <a href="https://portal.rooftop.com.br/oportunidades" id="manualRedirect">
+            Clique aqui se não for redirecionado automaticamente
+          </a>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Redirect após 5 segundos
+      // setTimeout(function() {
+      //   window.location.href = 'https://portal.rooftop.com.br/oportunidades';
+      // }, 5000);
+      
+      // Adicionar event listener para o link manual
+      document.getElementById('manualRedirect').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = 'https://portal.rooftop.com.br/oportunidades';
+      });
+    </script>
+    
+    {{ standard_footer_includes }}
+  </body>
+</html>

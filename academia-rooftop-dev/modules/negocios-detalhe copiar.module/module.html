@@ -1,0 +1,148 @@
+{# Página de Detalhes do Negócio - Portal do Franqueado Rooftop #}
+{% set negocio_id = request.query_dict.negocio_id || 43490150668  %}
+<!--  || "39825791249" -->
+{% set ticket_id_franquia = request.query_dict.ticket_id_franquia || 29537449366  %}
+<!--  || "24091021106" -->
+
+{# Carrega os dados do Negócio e do Ticket da Franquia #}
+{% if negocio_id %}
+  {% set negocio = crm_object("deal", negocio_id, "dealname,amount,dealstage,closedate,dealowner,pipeline,hs_object_id,createdate,description,hs_lastmodifieddate,hubspot_owner_id,notes_last_contacted,notes_last_updated,num_contacted_notes,hs_deal_stage_probability,telefone_do_contato,e_mail_do_contato,tipo_de_imovel,cep,qual_o_endereco_completo_do_imovel_,numero,complemento_do_endereco,em_qual_cidade_fica_localizado_o_imovel_,estado,historia_do_cliente,qual_o_seu_principal_objetivo_,qual_a_faixa_de_valor_do_seu_imovel_") %}
+{% else %}
+  {% set negocio = null %}
+{% endif %}
+
+{% if ticket_id_franquia %}
+  {# Buscar o ticket da franquia com todos os campos que antes vinham do HomeCash #}
+  {% set ticket = crm_object("ticket", ticket_id_franquia, "hs_object_id,subject,content,hs_pipeline_stage,hs_ticket_priority,createdate,hs_lastmodifieddate,cep,endereco,estado_regiao,numero,bairro,cidade,completento,tipo_de_imovel,certidao_de_estado_civil,cnd_iptu,cpf_e_rg_do_s__proprietario_s_,boleto_de_condominio,iptu_do_imovel,matricula,comentarios_comite__pendencias_e_ressalvas_,comite_aprovou_,data_do_comite_de_aprovacao,prazo_de_caucao,valor_aprovado_para_compra___12_meses,valor_aprovado_para_compra___18_meses,valor_aprovado_para_locacao___12_meses,valor_aprovado_para_locacao___18_meses,fotos_internas,fotos_da_fachada,potencial_de_avaliacao_futura,qual_o_prazo_da_recompra_,valor_avaliado,valor_da_locacao,valor_de_liquidez__bruto_,valor_de_liquidez__para_cliente_,valor_de_recompra__referencia_,data_da_proposta_apresentada,detalhe_o_motivo_da_perda,motivo_da_perda,notas_iptu_do_imovel,notas_certidao_negativa_de_debitos_de_iptu,notas_cpf_e_rg_do_s__proprietario_s_,notas_certidao_de_estado_civil,notas_boleto_de_condominio,notas_matricula,status_iptu_do_imovel,status_certidao_negativa_de_debitos_de_iptu,status_cpf_e_rg_do_s__proprietario_s_,status_certidao_de_estado_civil,status_boleto_de_condominio,status_matricula,nome_do_proponente_principal,cpf_do_proponente_principal,data_de_nascimento_do_proponente_principal,nome_do_segundo_proponente,cpf_do_segundo_proponente,valor_esperado_pelo_cliente,valor_avaliacao_do_imovel_pelo_cliente,qual_o_valor_total_das_suas_dividas_,data_de_nascimento_do_segundo_proponente,nome_do_terceiro_proponente,cpf_do_terceiro_proponente,data_de_nascimento_do_terceiro_proponente,link_da_proposta,hs_pipeline,hs_v2_date_entered_1095534672,hs_v2_date_entered_1095534673,hs_v2_date_entered_1095534674,hs_v2_date_entered_1095534675,hs_v2_date_entered_1043275525,hs_v2_date_entered_1043275526,hs_v2_date_entered_1043275527,hs_v2_date_entered_1062003577,hs_v2_date_entered_1062003578,hs_v2_date_entered_1095528865,hs_v2_date_entered_1095528866,hs_v2_date_entered_1095528867,hs_v2_date_entered_1095528868,hs_v2_date_entered_1095528869,hs_v2_date_entered_1095528870,hs_v2_date_entered_1095528871,hs_v2_date_entered_1095528872,hs_v2_date_entered_1095528873,anexo_relatorio_revoluti_,solicitar_avaliacao_externa, video_da_vistoria, upload_do_laudo,sugestao_dia_horario_avaliacao_externa,comentario_do_franqueado_para_avaliacao_externa, documentos_complementares") %}
+  {# Como o ticket já é da franquia, usar ele mesmo como ticket_portal #}
+  {% set ticket_portal = ticket %}
+{% else %}
+  {% set ticket = null %}
+  {% set ticket_portal = null %}
+{% endif %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Negócio - {{ negocio.dealname }}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Toastify CSS and JS -->
+    <!-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+     -->
+    <!-- Custom Toastify Styles -->
+    <style>
+        .toastify {
+            border-radius: 0.5rem !important;
+            font-size: 0.875rem !important;
+            padding: 0.75rem 1rem !important;
+            min-width: 300px !important;
+            max-width: 400px !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .toastify-success {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+        }
+        .toastify-error {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        }
+        .toastify-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        }
+        .toastify-info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        }
+    </style>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { background-color: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: all 0.2s ease-in-out; cursor: pointer; }
+        .btn-primary { background-color: #2563eb; color: white; border: 1px solid transparent; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-secondary { background-color: white; color: #475569; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background-color: #f8fafc; }
+        .btn-icon { padding: 0.5rem; }
+        .btn-ghost { background-color: transparent; color: #64748b; border: none; }
+        .btn-ghost:hover { background-color: #f1f5f9; color: #334155; }
+        .form-input, .form-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; transition: all 0.2s ease-in-out; }
+        .form-input:focus, .form-select:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+        .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; line-height: 1; }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-warning { background-color: #fef9c3; color: #854d0e; }
+        .badge-danger { background-color: #fee2e2; color: #991b1b; }
+        .badge-info { background-color: #e0f2fe; color: #0369a1; }
+        .badge-gray { background-color: #f1f5f9; color: #475569; }
+    </style>
+</head>
+<body>
+  <section data-module="negocioDetalheModule" class="negocio-detalhe-module max-w-7xl mx-auto px-2">
+    <!-- Loading State -->
+    <div class="negocio-loading" style="display: none;">
+      <div class="flex items-center justify-center py-20">
+        <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="ml-4 text-lg font-semibold text-slate-700">Carregando detalhes do negócio...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="negocio-error" style="display: none;">
+      <div class="flex flex-col items-center justify-center py-16 text-center">
+        <svg class="h-16 w-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <h3 class="mb-2 text-xl font-semibold text-slate-900">Ops! Algo deu errado</h3>
+        <p class="mb-6 text-slate-500 max-w-sm">Não conseguimos carregar os detalhes. Por favor, tente novamente.</p>
+        <button onclick="window.location.reload()" class="btn btn-primary">Tentar novamente</button>
+      </div>
+    </div>
+
+    <!-- Content: Será preenchido pelo JS -->
+    <div class="negocio-content" style="display: none;"></div>
+
+    <!-- Not Found State -->
+    <div class="negocio-not-found" style="display: none;">
+       <div class="flex flex-col items-center justify-center py-16 text-center">
+        <svg class="h-16 w-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h3 class="mb-2 text-xl font-semibold text-slate-900">Negócio não encontrado</h3>
+        <p class="mb-6 text-slate-500 max-w-sm">O negócio solicitado não existe ou você não tem permissão para vê-lo.</p>
+        <button onclick="window.location.href='/negocios'" class="btn btn-primary">Voltar para negócios</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    window.hubspotNegocioData = {
+      success: {% if negocio %}true{% else %}false{% endif %},
+      data: {% if negocio %}{{ negocio|tojson }}{% else %}null{% endif %},
+      negocioId: {{ negocio_id|tojson }},
+      timestamp: new Date().toISOString()
+    };
+    
+    window.hubspotTicketData = {
+      success: {% if ticket %}true{% else %}false{% endif %},
+      data: {% if ticket %}{{ ticket|tojson }}{% else %}null{% endif %},
+      ticketId: {{ ticket_id_franquia|tojson }},
+      timestamp: new Date().toISOString()
+    };
+    
+    window.hubspotTicketPortalData = {
+      success: {% if ticket_portal %}true{% else %}false{% endif %},
+      data: {% if ticket_portal %}{{ ticket_portal|tojson }}{% else %}null{% endif %},
+      ticketId: {{ ticket_id_franquia|tojson }},
+      timestamp: new Date().toISOString()
+    };
+    
+    window.hubspotUserData = {
+      {# contactId: {% if request_contact.is_logged_in %}{{ request.contact.contact_vid }}{% else %}null{% endif %} #}
+      contactId: {{ request.contact.contact_vid || 133645175296 }}
+    };
+  </script>
+  
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "global" : false,
+  "content_types" : [ "SITE_PAGE", "CUSTOMER_PORTAL" ],
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 196264954480,
+  "label" : "Detalhe de negócios",
+  "is_available_for_new_content" : true
+}

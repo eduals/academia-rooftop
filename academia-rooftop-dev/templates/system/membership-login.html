@@ -1,0 +1,82 @@
+<!--
+  templateType: membership_login_page
+  isAvailableForNewContent: true
+  label: Academia - membership login
+  screenshotPath: ../../images/template-previews/membership-login.png
+-->
+{% set template_css = '../../css/templates/system.css' %}
+{% extends '../layouts/base.html' %}
+{# pageTitle is used on system templates for setting a value for the title tag #}
+{% set pageTitle = "Rooftop Franquias | Login" %}
+
+{% block header %}
+{% endblock %}
+
+{% block body %}
+<section class="content-wrapper">
+  <div class="systems-page membership-login-header">
+    {% module 'content'
+      path='@hubspot/rich_text',
+      html='<h1>Faça login para ver seus negócios</h1><p>Esta página está disponível apenas para pessoas que receberam acesso.</p>'
+    %}
+    <div class="form-container ac-membership-login__form">
+      {% member_login 'my_login'
+        email_label= 'Email',
+        password_label= 'Senha',
+        remember_me_label= 'Lembrar',
+        reset_password_text= 'Esqueceu sua senha?',
+        submit_button_text= 'Entrar'
+      %}
+    </div>
+    <!-- <div>
+      {% module_block module 'membership_admin_content'
+        label='Contate o administrador',
+        path='@hubspot/rich_text'
+      %}
+        {% module_attribute 'html' %}
+          <p>Está com problemas? <a href="{{'mailto:' ~ site_settings.membershipWebsiteAdmin}}">Contate o administrador</a>.</p> 
+        {% end_module_attribute %}
+      {% end_module_block %}
+    </div> -->
+  </div>
+</section>
+{% endblock %}
+
+<style> 
+  /* CORREÇÃO: Estilos específicos para o checkbox de consentimento */
+  .hs-form-field {
+        display: flex!important;
+        align-items: flex-start!important; /* Alinha no topo caso o texto seja muito longo */
+        gap: 8px; /* Espaço entre checkbox e label */
+    }
+
+    .hs-form-field input[type="checkbox"] {
+        flex-shrink: 0; /* Impede que o checkbox diminua */
+        margin-top: 2px; /* Pequeno ajuste para alinhar com a primeira linha do texto */
+    }
+
+    .hs-form-field label {
+        display: inline; /* Remove o display: block */
+        margin-bottom: 0; /* Remove margin-bottom do label */
+        flex: 1; /* Permite que o label ocupe o espaço restante */
+    }
+
+    /* Alternativa usando CSS Grid (opcional) */
+    .hs-form-field-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px;
+        align-items: start;
+        margin-bottom: 30px;
+    }
+
+    .hs-form-field-grid input[type="checkbox"] {
+        margin-top: 2px;
+    }
+
+    .hs-form-field-grid label {
+        display: inline;
+        margin-bottom: 0;
+    }
+</style>
+

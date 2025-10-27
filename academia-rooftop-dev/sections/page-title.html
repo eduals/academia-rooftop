@@ -1,0 +1,29 @@
+<!--
+  templateType: section
+  label: Page title
+  isAvailableForNewContent: true
+  screenshotPath: ../images/section-previews/page-title.png
+  description: "Page title section for placing at the top of pages."
+-->
+
+{% dnd_section
+    padding={ 
+      'default': { 'top': context.section_padding_top || 70, 'bottom': context.section_padding_bottom || 100 }
+    },
+    margin={ 
+      'default': { 'bottom': context.section_margin_bottom || 100 }
+    },
+    background_color={{ context.background_color || '#000000' }}
+%}
+    {% dnd_module path='../modules/fancy-header'
+      text={{ context.text || 'Title' }},
+      title_heading_type='h1',
+      huge=true,
+      styles={
+        'color': {
+          'color': context.color || '#FFFFFF'
+        }
+      }
+    %}
+    {% end_dnd_module %}
+{% end_dnd_section %}

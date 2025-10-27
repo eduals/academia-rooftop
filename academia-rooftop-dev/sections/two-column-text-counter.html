@@ -1,0 +1,119 @@
+<!--
+templateType: section
+label: Two Column Text Counter
+isAvailableForNewContent: true
+screenshotPath: ../images/section-previews/counters.png
+description: 'Section separated with two column left column has Content and right column has Counter.'
+-->
+
+{% dnd_section
+  class='ac-counter-section ac-tab-full-width',
+  vertical_alignment='MIDDLE',
+  padding={
+    'default' : {
+      'bottom' : '80px',
+      'top' : '80px'
+    },
+    'mobile' : {
+      'bottom' : '50px',
+      'top' : '50px'
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=6
+  %}
+    {% dnd_row
+      padding={
+        'default' : {
+          'bottom' : '30px',
+          'left' : '0px',
+          'right' : '0px',
+          'top' : '0px'
+        },
+        'mobile' : {
+          'bottom' : '20px',
+          'left' : '0px',
+          'right' : '0px',
+          'top' : '0px'
+        }
+      }
+    %}
+    {% dnd_module
+        path='../modules/title-content',
+        subtitle='',
+        style={
+          'max_width': {'enable': true, 'value': 400}
+        }
+      %}
+        {% module_attribute 'content' %}
+          <h2>Some Interesting Facts</h2>
+        {% end_module_attribute %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+  {% dnd_column
+    offset=6,
+    width=6
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path='../modules/counter',
+        column_count_choice={
+          'column_count' : 'two_column'
+        },
+        counter_repeater=[ {
+          'counter_text' : 'Working Hours',
+          'counter_unit' : '',
+          'counter_value' : '100',
+          'image' : {
+            'alt' : 'Clock Icon',
+            'height' : 80,
+            'max_height' : 80,
+            'max_width' : 80,
+            'src' : get_asset_url('../images/icons/clock.svg'),
+            'width' : 80
+          }
+        }, {
+          'counter_text' : 'Happy Customers',
+          'counter_unit' : '',
+          'counter_value' : '150',
+          'image' : {
+            'alt' : 'Users Icon',
+            'height' : 80,
+            'max_height' : 80,
+            'max_width' : 80,
+            'src' : get_asset_url('../images/icons/users-three.svg'),
+            'width' : 80
+          }
+        }, {
+          'counter_text' : 'Projects Finished',
+          'counter_unit' : '',
+          'counter_value' : '100',
+          'image' : {
+            'alt' : 'Presentation Icon',
+            'height' : 80,
+            'max_height' : 80,
+            'max_width' : 80,
+            'src' : get_asset_url('../images/icons/presentation-chart.svg'),
+            'width' : 80
+          }
+        }, {
+          'counter_text' : 'Course Categories',
+          'counter_unit' : '',
+          'counter_value' : '100',
+          'image' : {
+            'alt' : 'Coin Icon',
+            'height' : 80,
+            'max_height' : 80,
+            'max_width' : 80,
+            'src' : get_asset_url('../images/icons/coin.svg'),
+            'width' : 80
+          }
+        } ],
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}

@@ -1,0 +1,64 @@
+{# Página de Indicadores de Performance - Portal do Franqueado Rooftop #}
+
+{% set view_contact_id = request.query_dict.view_contact_id %}
+{% if view_contact_id %}
+  {% set contact_id = view_contact_id %}
+{% elif request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid %}
+{% else %}
+  {% set contact_id = null %}
+{% endif %}
+
+<script>
+  // Passar ID do contato para o módulo JavaScript
+  window.hubspotContactId = {% if contact_id %}'{{contact_id}}'{% else %}null{% endif %};
+  console.log('📌 Contact ID:', window.hubspotContactId);
+</script>
+
+<header class="bg-white shadow-sm">
+  <div class="mx-auto max-w-full px-4 py-6 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center">
+      <h2 class="text-3xl font-bold tracking-tight text-gray-900">Indicadores de Performance</h2>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="mx-auto max-w-full px-4 py-6">
+
+    <section data-module="sitplanModule" class="sitplan-module">
+
+      <div class="sitplan-error" style="display: none;">
+         <div class="text-center py-16">
+           <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+             <svg class="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </div>
+           <h3 class="text-lg font-medium text-gray-900 mb-2 error-message">Erro ao carregar os dados</h3>
+           <p class="text-gray-500 mb-8">Tente recarregar a página ou entre em contato com o suporte.</p>
+           <button onclick="window.location.reload()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+             Tentar Novamente
+           </button>
+         </div>
+       </div>
+
+      <div class="sitplan-content">
+        <!-- O conteúdo será inserido dinamicamente pelo JavaScript -->
+      </div>
+
+    </section>
+   </div>
+ </main>
+
+
+<style>
+ @keyframes pulse {
+   0%, 100% { opacity: 1; }
+   50% { opacity: 0.5; }
+ }
+
+ .animate-pulse {
+   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+ }
+</style>

@@ -1,0 +1,406 @@
+/* Global */
+.body-wrapper:not(:has(> div:first-child)) > .body-container-wrapper {
+  margin-top: 0!important;
+}
+
+.error-page,
+.systems-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 15px;
+  position: relative;
+  text-align: center;
+}
+
+.system-page__banner {
+  max-width: 300px;
+  margin: 0 auto 30px;
+}
+
+.system-page__banner img {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.membership-register h1,
+.membership-reset-password-request h1,
+.membership-reset-password h1,
+.password-prompt-wrap h1,
+.subscription-confirmation h1,
+.membership-login-header h1,
+.backup-unsubscribe__content h1,
+.ac-communication-preferences h1 {
+  font-size: 28px;
+  line-height: 40px;
+}
+
+.systems-page form {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.membership-reset-password-request__form form,
+.membership-reset-password form,
+.password-prompt-wrap form,
+.membership-register form {
+  padding: 20px 0;
+} 
+
+.membership-reset-password-request__form  input[type="submit"],
+.membership-reset-password__form  input[type="submit"] {
+  margin: 25px auto 0 !important;
+}
+
+/* Error Page */
+
+.error-page h1 {
+  font-size: 28px;
+  line-height: 40px;
+  margin: 0 0 20px 0;
+  text-transform: uppercase;
+}
+
+/* System pages */
+
+.systems-page--search-results {
+  max-width: 100%;
+}
+
+.systems-page .header {
+  background-color: transparent;
+  border-bottom: none;
+  padding: 0;
+}
+
+.systems-page .success {
+  background: rgba(55, 179, 74, 0.16);
+  border-radius: 8px;
+  color: #37B34A;
+  display: inline-block;
+  margin: 25px 0;
+  padding: 8px 16px;
+  width: 100%;
+}
+
+.systems-page form input {
+  max-width: 100%;
+}
+
+.systems-page form input[type='submit'] {
+  margin: 25px 0 0;
+  display: block;
+}
+
+/* Search pages */
+
+.content-wrapper.search-results-wrap {
+  padding: 60px 20px;
+}
+
+.search-results-wrap .search-results__input {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.search-results-wrap .hs-search-field--open .hs-search-field__suggestions {
+  padding: 10px 0;
+  border: none;
+  margin: 20px 0;
+  border-radius: 12px;
+  box-shadow: 0 20px 30px rgba(1, 11, 60, 0.10);
+}
+
+.search-results-wrap .hs-search-field--open .hs-search-field__suggestions #results-for {
+  padding: 6px 10px;
+}
+
+.search-results-wrap .hs-search-field--open .hs-search-field__suggestions li a {
+  padding: 6px 10px;
+  transition: 0.3s linear all;
+  color: {{theme.color_font_setting.typography.body_text.desktop.font.color }};
+}
+
+.search-results-wrap .hs-search-field--open .hs-search-field__suggestions li a:hover {
+  background-color: {{ theme.color_font_setting.global_colors.accent_color.color }};
+}
+
+.search-results-wrap .hs-search-results__listing li {
+  background-color: {{ theme.color_font_setting.global_colors.accent_color.color }};
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.search-results-wrap .hs-search-results__pagination a {
+  color: {{ theme.color_font_setting.global_colors.heading_color.color }};
+}
+ 
+.ac-search__keyword span,
+.hs-search-highlight{
+  color: {{ theme.color_font_setting.global_colors.secondary.color }};
+}
+ 
+.hs-search-results__title {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+  text-decoration: none;
+  font-weight: 600;
+  color: {{ theme.color_font_setting.global_colors.heading_color.color }};
+}
+
+.hs-search-results__title:hover {
+  text-decoration: none;
+  font-weight: 600;
+  color: {{ theme.color_font_setting.global_colors.heading_color.color }};
+}
+
+.hs-search-results__description {
+  padding-top: 0.7rem;
+}
+
+
+/* Password prompt */
+
+.password-prompt input[type=password] {
+  height: auto !important;
+}
+
+.systems-page #hs-login-widget-remember,
+.systems-page #hs-login-widget-remember ~ label {
+  display: inline-block;
+  margin-bottom: 0.175rem;
+}
+
+.systems-page #hs_login_reset {
+  display: block;
+  margin-bottom: 0.7rem;
+}
+
+/* Backup unsubscribe */
+
+.backup-unsubscribe #email-prefs-form div {
+  padding-bottom: 0 !important;
+}
+
+.backup-unsubscribe input[type=email] {
+  padding: 10px !important;
+}
+
+.backup-unsubscribe input[type=email]:placeholder {
+  font-weight: 600;
+}
+
+.backup-unsubscribe__content {
+  text-align: center;
+}
+
+.backup-unsubscribe__content h3 {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.backup-unsubscribe__content input[type="submit"] {
+  margin: 40px auto 0 !important;
+}
+
+.backup-unsubscribe__content form {
+  padding: 0;
+}
+
+/* Subscription preferences */
+
+#email-prefs-form .item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#email-prefs-form .item.disabled input:disabled {
+  cursor: not-allowed;
+}
+
+.ac-communication-preferences {
+  max-width: 800px;
+  text-align: left;
+}
+
+.ac-communication-preferences p {
+  margin: 0 0 15px;
+}
+
+.ac-communication-preferences h2 {
+  font-size: 24px;
+  line-height: 30px;
+  margin-bottom: 0;
+}
+
+.ac-communication-preferences .header {
+  color: #111111;
+  font-weight: 700;
+}
+
+.ac-communication-preferences form  {
+  padding: 0;
+}
+
+.ac-communication-preferences form input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+.ac-communication-preferences .subscribe-options {
+  margin-top: 40px;
+}
+
+.ac-communication-preferences .page-header {
+  margin-bottom: 30px;
+}
+
+.ac-communication-preferences input[type='submit'] {
+  margin-top: 30px!important;
+}
+
+/* Subscription confirmation */
+
+.ac-subscription-confirmation .page-header h2 {
+  font-size: 24px;
+  color: #FF9F0D;
+}
+
+/* Membership pages */
+
+#hs-membership-form a[class*='show-password'] {
+  font-size: 16px;
+}
+
+.membership-login-header h1 {
+  margin-bottom: 25px;
+}
+
+.password-prompt-wrap form,
+.membership-reset-password__form form,
+.ac-membership-login__form form {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 0 0 0;
+}
+
+.membership-reset-password__form form input[type="submit"],
+.ac-membership-login__form form input[type="submit"] {
+  display: block;
+  width: 100%;
+}
+
+.ac-membership-login__form form .hs-form-field,
+.ac-membership-login__form form #hs_login_reset {
+  text-align: left;
+}
+
+.ac-membership-login__form {
+  margin-top: 40px;
+}
+
+.ac-membership-login__form form #hs_login_reset {
+  font-size: 16px;
+  margin-bottom: 40px;
+}
+
+/* Password Prompt */
+.password-prompt__content input[type="submit"] {
+  margin: 30px auto 0 !important;
+}
+
+/* Reset Password */
+
+.membership-reset-password__form .hs-form-field {
+  text-align: left;
+}
+
+/* Reset Password Request */
+
+.membership-reset-password-request__form .hs-form-field {
+  text-align: left;
+}
+
+/* Memebership Register */
+
+.membership-register {
+  max-width: 600px;
+}
+
+.membership-register .hs-error-msgs label {
+  color: #DB524E;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.membership-register .hs-form-field {
+  text-align: left;
+}
+
+.membership-register  input[type="submit"] {
+  margin: 40px auto 0 !important;
+  max-width: 400px;
+  width: 100%;
+}
+
+/* Input error messages */
+
+.form-input-validation-message ul.hs-error-msgs {
+  padding-left: 0;
+  margin: 0;
+}
+
+.form-input-validation-message ul.hs-error-msgs li {
+  margin: 0;
+}
+
+/* Media Queries */
+
+@media only screen and (min-width: 768px) {
+  .systems-page {
+    padding: 40px 15px 60px;
+  }
+  
+  .ac-subscription-confirmation .page-header h2 {
+    font-size: 40px;
+    line-height: 48px;
+  }
+  
+  .ac-search__keyword {
+    margin-bottom: 40px;
+  }
+
+  .ac-search-results .hs-search-results__listing li {
+    margin-bottom: 50px;
+  }
+
+  .error-page h1,
+  .backup-unsubscribe__content h1,
+  .membership-login-header h1,
+  .membership-register h1,
+  .membership-reset-password-request h1,
+  .membership-reset-password h1,
+  .password-prompt-wrap h1,
+  .ac-communication-preferences h1,
+  .subscription-confirmation h1 {
+    font-size: 48px;
+    line-height: 56px;
+  }
+
+  .backup-unsubscribe__content h3 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .backup-unsubscribe__content form {
+    padding: 20px;
+  }
+
+  .membership-login-header h1 {
+    margin-bottom: 40px;
+  }
+  
+  .ac-communication-preferences input[type='submit'] {
+    margin-top: 60px!important;
+  }
+}

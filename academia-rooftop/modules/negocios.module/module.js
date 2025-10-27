@@ -123,7 +123,11 @@
           
           // Campo história do cliente
           homecash_content: item.deal_historia_do_cliente || '',
-          
+
+          // Lead recuperado
+          deal_lead_recuperado: item.deal_lead_recuperado,
+          deal_entered_mql: item?.deal_entered_mql,
+
           // Dados do ticket franquia
           ticket_franquia_id: item.ticket_id,
           ticket_franquia_subject: item.ticket_subject,
@@ -141,7 +145,13 @@
           
           // Flags de pipeline
           isHomeCash: item.ticket_pipeline === '0',
-          isFranquia: item.ticket_pipeline === '714520128'
+          isFranquia: item.ticket_pipeline === '714520128',
+          
+          // Motivos de descarte e perda
+          ticket_motivo_do_descarte: item.ticket_motivo_do_descarte,
+          ticket_detalhe_o_motivo_do_descarte: item.ticket_detalhe_o_motivo_do_descarte,
+          ticket_detalhe_o_motivo_da_perda: item.ticket_detalhe_o_motivo_da_perda,
+          ticket_motivo_da_perda: item.ticket_motivo_da_perda
         };
       });
       
@@ -242,7 +252,8 @@
 
     handleNegociosResponse: function (response) {
       var negocios = response.data?.CRM?.deal_collection?.items || [];
-
+      // console.log('response.data handleNegociosResponse',  response.data);
+      // console.log('negocios handleNegociosResponse', negocios);
       this.hideAllSections();
 
       // ✅ VERIFICAR SE HÁ DADOS REAIS ANTES DE MOSTRAR EMPTY STATE
@@ -408,12 +419,46 @@
       var prioridade = this.getPrioridadeInfo(negocio.homecash_priority || 'MEDIUM');
       var diasEsteira = this.getDiasNaEsteira(negocio.original_createdate || negocio.homecash_createdate);
 
+      // Verificar se é lead recuperado (compatível com ES5)
+      var leadRecuperado = negocio.deal_lead_recuperado === true;
+      var enteredMql = negocio.deal_entered_mql === true;
+      
+      // Capturar campos de motivo da API
+      var motivoDescarte = negocio.ticket_motivo_do_descarte;
+      var motivoPerda = negocio.ticket_motivo_da_perda;
+      var detalheMotivoDescarte = negocio.ticket_detalhe_o_motivo_do_descarte;
+      var detalheMotivoPerda = negocio.ticket_detalhe_o_motivo_da_perda;
+
+      // Determinar qual ícone mostrar
+      var leadIcon = '';
+      if (leadRecuperado && enteredMql) {
+        // Fire icon - Lead recuperado que passou por MQL
+        leadIcon = `
+          <span title="Lead recuperado - Passou por MQL" class="inline-flex">
+            <svg class="w-4 h-4 text-orange-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"></path>
+            </svg>
+          </span>
+        `;
+      } else if (leadRecuperado) {
+        // Gift icon - Lead recuperado que não passou por MQL
+        leadIcon = `
+          <span title="Lead recuperado - Nova oportunidade" class="inline-flex">
+            <svg class="w-4 h-4 text-green-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+  <path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"></path>
+  <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z"></path>
+</svg>
+          </span>
+        `;
+      }
+
       // Nome como link para detalhes
       var nomeComLink = `
-        <a href="/negocios/detalhe?negocio_id=${negocio.deal_original_id}&ticket_id_franquia=${negocio.ticket_franquia_id}" 
-           class="text-blue-600 hover:text-blue-900 hover:underline font-medium">
-          ${nome}
-        </a>
+      <a href="/negocios/detalhe?negocio_id=${negocio.deal_original_id}&ticket_id_franquia=${negocio.ticket_franquia_id}" 
+        class="text-blue-600 hover:text-blue-900 hover:underline font-medium" target="_blank">
+        ${nome} 
+        ${leadIcon}
+      </a>
       `;
 
       // Botão Finalizar (sempre visível, mas você pode adicionar condições)
@@ -430,13 +475,35 @@
         </button>
       `;
 
+      // Renderizar status badge (clicável se for Descartado/Perdido com motivo)
+      var statusBadge;
+      var isDescartado = negocio.ticket_franquia_stage === '1095528872';
+      var isPerdido = negocio.ticket_franquia_stage === '1095528873';
+      var motivoBase = isDescartado ? motivoDescarte : motivoPerda;
+      var detalheMotivo = isDescartado ? detalheMotivoDescarte : detalheMotivoPerda;
+
+      if ((isDescartado || isPerdido) && (motivoBase || detalheMotivo)) {
+        var tipoMotivo = isDescartado ? 'descartado' : 'perdido';
+        statusBadge = `
+          <button
+            onclick="window.negociosModule.showMotivoModal('${(motivoBase || '').replace(/'/g, "\\'")}', '${(detalheMotivo || '').replace(/'/g, "\\'")}', '${tipoMotivo}', '${nome.replace(/'/g, "\\'")}')"
+            class="px-2 py-1 text-xs rounded-full ${status.color} cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            title="Clique para ver o motivo"
+          >
+            ${status.label}
+          </button>
+        `;
+      } else {
+        statusBadge = `<span class="px-2 py-1 text-xs rounded-full ${status.color}">${status.label}</span>`;
+      }
+
       return `
         <tr class="hover:bg-gray-50">
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="text-sm">${nomeComLink}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <span class="px-2 py-1 text-xs rounded-full ${status.color}">${status.label}</span>
+            ${statusBadge}
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
             ${data}
@@ -766,6 +833,123 @@
     },
 
     /**
+     * Exibir modal com motivo do descarte/perda
+     * @param {string} motivoBase - Motivo base do descarte/perda
+     * @param {string} detalheMotivo - Detalhes do motivo
+     * @param {string} tipo - Tipo: 'descartado' ou 'perdido'
+     * @param {string} negocioNome - Nome do negócio
+     */
+    showMotivoModal: function (motivoBase, detalheMotivo, tipo, negocioNome) {
+      // Remover modal existente se houver
+      var existingModal = document.getElementById('modal-motivo');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      const tipoLabel = tipo === 'descartado' ? 'Descarte' : 'Perda';
+      const tipoColor = tipo === 'descartado' ? 'gray' : 'red';
+      const iconPath = tipo === 'descartado'
+        ? 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+        : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z';
+
+      const modalHTML = `
+        <!-- Modal Overlay -->
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="modal-overlay-motivo">
+          <div class="relative mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 xl:w-2/5 shadow-lg rounded-md bg-white">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 class="text-lg font-semibold text-gray-900">
+                <svg class="w-5 h-5 text-${tipoColor}-500 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"></path>
+                </svg>
+                Motivo ${tipoLabel}
+              </h3>
+              <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="window.negociosModule.fecharMotivoModal()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6">
+              <!-- Motivo base -->
+              <div class="mb-4 p-3 bg-${tipoColor}-50 rounded-lg border border-${tipoColor}-200">
+                <p class="text-sm text-${tipoColor}-800">
+                  <span class="font-medium">Motivo do ${tipoLabel}:</span><br>
+                  ${motivoBase || 'Não há motivos informados, por favor entre em contato com o suporte.'}
+                </p>
+              </div>
+
+              <!-- Detalhes do motivo -->
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Detalhes do motivo:
+                </label>
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div class="text-sm text-gray-800 leading-relaxed">
+                    ${detalheMotivo ? this.sanitizeText(detalheMotivo) : 'Nenhum detalhe adicional informado.'}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onclick="window.negociosModule.fecharMotivoModal()"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Adicionar modal ao body
+      const modalContainer = document.createElement('div');
+      modalContainer.id = 'modal-motivo';
+      modalContainer.innerHTML = modalHTML;
+      document.body.appendChild(modalContainer);
+
+      // Adicionar event listener para fechar clicando fora
+      document.getElementById('modal-overlay-motivo').addEventListener('click', function(e) {
+        if (e.target.id === 'modal-overlay-motivo') {
+          window.negociosModule.fecharMotivoModal();
+        }
+      });
+    },
+
+    /**
+     * Fechar modal de motivo
+     */
+    fecharMotivoModal: function () {
+      const modal = document.getElementById('modal-motivo');
+      if (modal) {
+        modal.remove();
+      }
+    },
+
+    /**
+     * Sanitizar texto para evitar quebras na aplicação
+     * @param {string} text - Texto a ser sanitizado
+     */
+    sanitizeText: function(text) {
+      if (!text) return '';
+      return text.toString()
+        .replace(/\n/g, '<br>')           // Quebras de linha → <br>
+        .replace(/\r/g, '')               // Remove \r
+        .replace(/'/g, '&#39;')           // Aspas simples → HTML entity
+        .replace(/"/g, '&quot;')          // Aspas duplas → HTML entity
+        .replace(/</g, '&lt;')            // < → HTML entity (exceto <br>)
+        .replace(/>/g, '&gt;')            // > → HTML entity (exceto <br>)
+        .replace(/&lt;br&gt;/g, '<br>');  // Restaurar <br> tags
+    },
+
+   /**
      * Abrir modal para finalizar negócio (acionado pelo botão Finalizar)
      * @param {string} ticketId - ID do ticket
      * @param {string} dealId - ID do deal
@@ -957,16 +1141,18 @@
             <!-- Campo Descrição -->
             <div class="mb-6">
               <label for="descricao-textarea" class="block text-sm font-medium text-gray-700 mb-2">
-                Descrição (Opcional)
+                Descrição do motivo <span class="text-red-500">*</span>
               </label>
-              <textarea 
+              <textarea
                 id="descricao-textarea"
                 rows="4"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-${tipoColor}-500 focus:border-${tipoColor}-500 text-sm resize-y"
-                placeholder="Descreva mais detalhes sobre o motivo..."
+                placeholder="Descreva mais detalhes sobre o motivo (mínimo 50 caracteres)..."
+                minlength="50"
                 maxlength="500"
+                required
               ></textarea>
-              <p class="mt-1 text-xs text-gray-500" id="char-counter">500 caracteres restantes</p>
+              <p class="mt-1 text-xs text-gray-500" id="char-counter">0/50 caracteres (mínimo) | 500 restantes</p>
             </div>
             
             <!-- Mensagens de Erro/Sucesso -->
@@ -1132,6 +1318,12 @@
         return;
       }
 
+      if (!descricao || descricao.length < 50) {
+        var caracteres = descricao ? descricao.length : 0;
+        this.showModalError('A descrição deve ter no mínimo 50 caracteres. Atual: ' + caracteres + '/50');
+        return;
+      }
+
       if (!this.modalState.currentTicketId) {
         this.showModalError('ID do ticket não encontrado.');
         return;
@@ -1238,9 +1430,29 @@
       var counter = document.getElementById('char-counter');
       if (textarea && counter) {
         textarea.addEventListener('input', function () {
-          var remaining = 500 - this.value.length;
-          counter.textContent = remaining + ' caracteres restantes';
-          counter.className = remaining < 50 ? 'mt-1 text-xs text-red-500' : 'mt-1 text-xs text-gray-500';
+          var currentLength = this.value.length;
+          var remaining = 500 - currentLength;
+          var minimo = 50;
+
+          // Atualizar texto do contador
+          if (currentLength < minimo) {
+            counter.textContent = currentLength + '/' + minimo + ' caracteres (mínimo) | ' + remaining + ' restantes';
+            counter.className = 'mt-1 text-xs font-medium text-red-500';
+            // Adicionar borda vermelha ao textarea
+            this.classList.remove('border-gray-300', 'border-green-500');
+            this.classList.add('border-red-500');
+          } else {
+            counter.textContent = currentLength + '/' + minimo + ' caracteres ✓ | ' + remaining + ' restantes';
+            counter.className = 'mt-1 text-xs font-medium text-green-600';
+            // Adicionar borda verde ao textarea
+            this.classList.remove('border-gray-300', 'border-red-500');
+            this.classList.add('border-green-500');
+          }
+
+          // Alerta se estiver perto do limite máximo
+          if (remaining < 50) {
+            counter.className = 'mt-1 text-xs font-medium text-orange-500';
+          }
         });
       }
     },

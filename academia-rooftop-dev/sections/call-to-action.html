@@ -1,0 +1,92 @@
+<!--
+templateType: section
+label: Call To Action
+isAvailableForNewContent: true
+screenshotPath: ../images/section-previews/cta.png
+description: "Section separated with two column left column has image and right column has content with cta button"
+-->
+
+{% dnd_section
+  class='ac-cta-section ac-tab-full-width',
+  vertical_alignment='MIDDLE',
+  background_color='rgba(43, 78, 255, 0.1)',
+  padding={
+    'default' : {
+      'bottom' : '60px',
+      'left' : '20px',
+      'right' : '20px',
+      'top' : '60px'
+    },
+    'mobile' : {
+      'bottom' : '50px',
+      'left' : '15px',
+      'right' : '15px',
+      'top' : '50px'
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=4
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path='../modules/image',
+        image={
+          'alt' : 'Graduated Girl',
+          'height' : 328,
+          'loading' : 'lazy',
+          'max_height' : 328,
+          'max_width' : 328,
+          'size_type' : 'auto',
+          'src' : get_asset_url('../images/multipurpose/graduate.png'),
+          'width' : 328
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row %}
+      {% dnd_module
+        path='../modules/spacer',
+        offset=0,
+        width=12,
+        style={
+          'background_color' : {
+            'color' : '#2B4EFF',
+            'opacity' : 0
+          },
+          'height_desktop_' : 0,
+          'height_mobile_' : 30,
+          'height_tablet_' : 30
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+  {% dnd_column
+    offset=4,
+    width=8
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path='../modules/title-content',
+        subtitle='',
+        style={
+          'max_width' : {
+            'enable' : true,
+            'value' : 700
+          }
+        },
+        primary_cta={
+          'text' : 'Contact',
+          'type' : 'btn'
+        }
+      %}
+        {% module_attribute 'content' %}
+          <h2>Interested? Lets get in touch!</h2>
+          <p><span>Never miss an update. If you want to stay tuned with our latest innovations and happenings then subscribe to our newsletter. Get all our updates delivered</span><span>&nbsp;straight into your inbox.</span></p>
+        {% end_module_attribute %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}

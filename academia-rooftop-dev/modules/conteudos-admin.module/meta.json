@@ -1,0 +1,9 @@
+{
+  "global" : true,
+  "content_types" : [ "MEMBERSHIP", "SITE_PAGE", "CUSTOMER_PORTAL", "BLOG_LISTING" ],
+  "smart_type" : "NOT_SMART",
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 194485378688,
+  "label" : "Modulo de administração de conteudos",
+  "is_available_for_new_content" : true
+}

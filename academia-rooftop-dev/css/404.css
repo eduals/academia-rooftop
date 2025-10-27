@@ -1,0 +1,22 @@
+/* @import url('http://example.com/example_style.css'); */
+
+/***********************************************/
+/* CSS @imports must be at the top of the file */
+/* Add them above this section                 */
+/***********************************************/
+
+/*****************************************/
+/* Start your style declarations here    */
+/*****************************************/
+
+header {
+    display: none!important;
+}
+
+.body-container-wrapper{
+  margin-top: 0px!important;
+}
+
+footer {
+    display: none!important;
+}

@@ -1,0 +1,15 @@
+{
+  "content_tags" : [ {
+    "name" : "HEADERS",
+    "source" : "USER"
+  } ],
+  "global" : true,
+  "content_types" : [ "LANDING_PAGE", "SITE_PAGE", "CUSTOMER_PORTAL", "WEB_INTERACTIVE" ],
+  "master_language" : "pt",
+  "smart_type" : "NOT_SMART",
+  "categories" : [ "BODY_CONTENT" ],
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 192699490085,
+  "label" : "Header - Portal Franquiado",
+  "is_available_for_new_content" : true
+}

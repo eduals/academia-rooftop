@@ -1,0 +1,57 @@
+{# Relatórios - Portal do Franqueado Rooftop #}
+{# Busca dados de atividades para relatórios #}
+{% if request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set relatorios_data = crm_associations(request.contact.contact_vid, 'HUBSPOT_DEFINED', 4, '', 'dealname,amount,dealstage,closedate,dealowner,pipeline,hs_object_id,createdate', 100) %}
+{% else %}
+  {% set relatorios_data = {'results': [], 'total': 0, 'has_more': false} %}
+{% endif %}
+
+<div class="mx-auto max-w-7xl px-4 py-6">
+  <section data-module="relatoriosModule" class="relatorios-module">
+    
+    <div class="relatorios-loading" style="display: none;">
+      <div class="flex items-center justify-center py-16">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800"></div>
+        <span class="ml-3 text-gray-600">Carregando relatórios...</span>
+      </div>
+    </div>
+
+    <div class="relatorios-error" style="display: none;">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-red-800">Erro ao carregar os dados dos relatórios.</p>
+      </div>
+    </div>
+
+    <div class="relatorios-content" style="display: none;">
+      <!-- O conteúdo será inserido dinamicamente pelo JavaScript -->
+    </div>
+
+    <div class="relatorios-empty" style="display: none;">
+      <div class="text-center py-16">
+        <div class="mx-auto h-12 w-12 text-gray-400">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">Nenhum dado encontrado</h3>
+        <p class="mt-2 text-gray-500">Não há dados de relatórios disponíveis no momento.</p>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<script>
+  window.hubspotRelatoriosData = {
+    success: false,
+    data: {
+      relatorios: []
+    },
+    total: 0,
+    hasMore: false,
+    timestamp: new Date().toISOString(),
+    source: 'mock_data'
+  };
+
+  console.log('HubSpot Relatórios Data loaded:', window.hubspotRelatoriosData);
+</script>

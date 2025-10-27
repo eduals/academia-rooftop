@@ -1,0 +1,19 @@
+.dnd_area-row-0-padding{
+    padding-top: 0px !important;
+}
+
+/* Esconder indicadores quando em modo de edição */
+.hidden-in-edit {
+    display: none !important;
+}
+
+/* Estilo para células em modo de edição */
+.linha-em-edicao .editable-cell {
+    min-width: 80px;
+    min-height: 36px;
+}
+
+/* Transição suave para o ícone de editar */
+.group:hover button {
+    transition: opacity 0.2s ease-in-out;
+}

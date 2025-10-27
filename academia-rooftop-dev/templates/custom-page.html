@@ -1,0 +1,761 @@
+<!--
+templateType: page
+isAvailableForNewContent: true
+label: Página Customizada Rooftop
+-->
+{% extends './layouts/base.html' %}
+
+{% block body %}
+
+{% dnd_area 'dnd_area'
+  label='Main section',
+  class='body-container body-container--homepage-one'
+%}
+
+{# Homepage Banner #}
+{% dnd_section
+  background_color="rgba(243, 244, 248, 1)",
+  padding={
+    "default" : {
+      "bottom" : "0px",
+      "left" : "0px",
+      "right" : "0px",
+      "top" : "0px"
+    },
+    "mobile" : {
+      "bottom" : "0px",
+      "left" : "0px",
+      "right" : "0px",
+      "top" : "0px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12,
+    padding={
+      "default" : {
+        "bottom" : "0px",
+        "left" : "0px",
+        "right" : "0px",
+        "top" : "0px"
+      },
+      "mobile" : {
+        "bottom" : "0px",
+        "left" : "0px",
+        "right" : "0px",
+        "top" : "0px"
+      }
+    }
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/banner-layouts",
+        offset=0,
+        width=12,
+          style={
+          "banner_content_alignment" : {
+            "banner_content_alignment_mobile_" : {
+              "alignment_choice" : "center"
+            }
+          },
+          "breadcrumb" : {
+            "breadcrumb_text_color" : {
+              "color" : {
+                "color" : "#000000",
+                "opacity" : 100
+              }
+            }
+          },
+          "max_width" : {
+            "enable" : true
+          },
+          "content_color" : {
+            "subtitle" : {
+              "overwrite_style" : true
+            }
+          },
+          "spacing" : {
+            "desktop" : {
+              "spacing" : {
+                "margin" : {
+                  "bottom" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "top" : {
+                    "units" : "px",
+                    "value" : 0
+                  }
+                },
+                "padding" : {
+                  "bottom" : {
+                    "units" : "px",
+                    "value" : 80
+                  },
+                  "left" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "right" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "top" : {
+                    "units" : "px",
+                    "value" : 60
+                  }
+                }
+              }
+            },
+            "mobile" : {
+              "spacing_mobile_" : {
+                "margin" : {
+                  "bottom" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "top" : {
+                    "units" : "px",
+                    "value" : 0
+                  }
+                },
+                "padding" : {
+                  "bottom" : {
+                    "units" : "px",
+                    "value" : 40
+                  },
+                  "left" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "right" : {
+                    "units" : "px",
+                    "value" : 0
+                  },
+                  "top" : {
+                    "units" : "px",
+                    "value" : 40
+                  }
+                }
+              }
+            }
+          }
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End of Homepage Banner #}
+
+{# Course Section #}
+{% dnd_section
+  padding={
+    "default" : {
+      "bottom" : "100px",
+      "top" : "100px"
+    },
+    "mobile" : {
+      "bottom" : "50px",
+      "top" : "50px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/title-content",
+        offset=0,
+        width=12,
+        style={
+          "alignment" : {
+            "alignment_choice" : "center"
+          },
+          "max_width" : {
+            "enable" : true,
+            "value" : 760
+          },
+          "subtitle" : {
+            "overwrite_style" : true
+          }
+        },
+        subtitle="What we offer"
+      %}
+        {% module_attribute "content" %}
+          <h2>Nossos cursos</h2>
+          <p>
+            Vamos construir juntos o seu futuro!
+          </p>
+        {% end_module_attribute %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/spacer",
+        offset=0,
+        width=12,
+        style={
+          "height_desktop_" : 60,
+          "height_mobile_" : 40,
+          "height_tablet_" : 60
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/icon-box",
+        offset=0,
+        width=12,
+        column_count_choice={
+          "column_count" : "three_column"
+        },
+        icon_box_repeater=[ {
+          "content" : '<h6>Cloud Computing</h6><p>Data is everything</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "Rainbow Cloud",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/rainbow.svg'),
+            "width" : 56
+          }
+        }, {
+          "content" : '<h6>Art &amp; Design</h6><p>Fun and Challenging</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "Paint Brush Icon",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/paint-brush.svg'),
+            "width" : 56
+          }
+        }, {
+          "content" : '<h6>Marketing</h6><p>Improve your business</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "Chartpie Icon",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/chartpie.svg'),
+            "width" : 56
+          }
+        }, {
+          "content" : '<h6>Development</h6><p>Learn to code</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "Development Icon",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/app-window.svg'),
+            "width" : 56
+          }
+        }, {
+          "content" : '<h6>Finance</h6><p>Manage Funds</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "Finance Icon",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/money.svg'),
+            "width" : 56
+          }
+        }, {
+          "content" : '<h6>Music</h6>\n<p>Learn to play music</p>',
+          "icon" : {
+            "name" : "Cube",
+            "type" : "SOLID",
+            "unicode" : "f1b2"
+          },
+          "image" : {
+            "alt" : "mega-phone",
+            "height" : 56,
+            "loading" : "lazy",
+            "max_height" : 56,
+            "max_width" : 56,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/mega-phone.svg'),
+            "width" : 56
+          }
+        } ],
+        style={
+          "box_shadow" : {
+            "enable_box_shadow" : true
+          },
+          "content" : { }
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End Of Course Section #}
+
+{# Counter Section #}
+{% dnd_section
+  background_color="rgba(243, 244, 248, 1)",
+  padding={
+    "default" : {
+      "bottom" : "80px",
+      "top" : "80px"
+    },
+    "mobile" : {
+      "bottom" : "40px",
+      "top" : "40px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12
+  %}
+    {% dnd_row
+      padding={
+        "default" : {
+          "bottom" : "35px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        },
+        "mobile" : {
+          "bottom" : "0px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        }
+      }
+    %}
+      {% dnd_module
+        path="../modules/title-content",
+        offset=0,
+        width=12,
+        style={
+          "alignment" : {
+            "alignment_choice" : "center"
+          },
+          "max_width" : {
+            "enable" : true,
+            "value" : 760
+          },
+          "subtitle" : {
+            "overwrite_style" : true
+          }
+        },
+        subtitle=""
+      %}
+        {% module_attribute "content" %}
+          <h2>Alguns fatos sobre nós</h2>
+        {% end_module_attribute %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row
+      padding={
+        "default" : {
+          "bottom" : "0px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        },
+        "mobile" : {
+          "bottom" : "0px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        }
+      }
+    %}
+      {% dnd_module
+        path="../modules/counter",
+        offset=0,
+        width=12,
+        counter_layouts={
+          "counter_layout_choice" : "compact_layout"
+        },
+        counter_repeater=[ {
+          "counter_icon" : {
+            "name" : "Clock",
+            "type" : "REGULAR",
+            "unicode" : "f017"
+          },
+          "counter_text" : "Lectures",
+          "counter_unit" : "",
+          "counter_value" : "100",
+          "image" : {
+            "alt" : "Clock",
+            "height" : 80,
+            "loading" : "lazy",
+            "max_height" : 80,
+            "max_width" : 80,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/clock.svg'),
+            "width" : 80
+          }
+        }, {
+          "counter_icon" : {
+            "name" : "Clock",
+            "type" : "REGULAR",
+            "unicode" : "f017"
+          },
+          "counter_text" : "Teachers",
+          "counter_unit" : "",
+          "counter_value" : "200",
+          "image" : {
+            "alt" : "Users Icon",
+            "height" : 80,
+            "loading" : "lazy",
+            "max_height" : 80,
+            "max_width" : 80,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/users-three.svg'),
+            "width" : 80
+          }
+        }, {
+          "counter_icon" : {
+            "name" : "Clock",
+            "type" : "REGULAR",
+            "unicode" : "f017"
+          },
+          "counter_text" : "Projects done",
+          "counter_unit" : "",
+          "counter_value" : "226",
+          "image" : {
+            "alt" : "Presentation Icon",
+            "height" : 80,
+            "loading" : "lazy",
+            "max_height" : 80,
+            "max_width" : 80,
+            "size_type" : "auto",
+            "src" : get_asset_url('../images/icons/presentation-chart.svg'),
+            "width" : 80
+          }
+        } ],
+        style={
+          "counter_font" : {
+            "text" : {
+              "desktop" : {
+                "counter_text_font_desktop_" : {
+                  "color" : "#53535b",
+                  "fallback" : "sans-serif",
+                  "font" : "Lato",
+                  "font_set" : "GOOGLE",
+                  "size" : 16,
+                  "styles" : { },
+                  "variant" : "regular"
+                },
+                "overwrite" : true
+              }
+            },
+            "value" : {
+              "desktop" : {
+                "counter_value_font_desktop_" : {
+                  "color" : "#0e1133",
+                  "fallback" : "sans-serif",
+                  "font" : "Lato",
+                  "font_set" : "GOOGLE",
+                  "size" : 48,
+                  "styles" : { },
+                  "variant" : "700"
+                },
+                "overwrite" : true
+              },
+              "mobile" : {
+                "counter_value_font_size_mobile_" : 32
+              }
+            }
+          }
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End Of Counter Section #}
+
+{# Courses Listing Section #}
+{% dnd_section %}
+  {% dnd_column
+    offset=0,
+    width=12,
+    padding={
+      "default" : {
+        "bottom" : "0px",
+        "left" : "16px",
+        "right" : "16px",
+        "top" : "0px"
+      },
+      "mobile" : {
+        "bottom" : "0px",
+        "left" : "0px",
+        "right" : "0px",
+        "top" : "0px"
+      }
+    }
+  %}
+    {% dnd_row
+      padding={
+        "default" : {
+          "bottom" : "40px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        },
+        "mobile" : {
+          "bottom" : "30px",
+          "left" : "0px",
+          "right" : "0px",
+          "top" : "0px"
+        }
+      }
+    %}
+     {% dnd_module
+        path="../modules/title-content",
+        offset=0,
+        width=12,
+        style={
+          "alignment" : {
+            "alignment_choice" : "center"
+          },
+          "max_width" : {
+            "enable" : true,
+            "value" : 760
+          },
+          "subtitle" : {
+            "overwrite_style" : true
+          }
+        },
+        subtitle="O que está em alta"
+      %}
+        {% module_attribute "content" %}
+          <h2>Alguns cursos populares</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Leo nec felis at pellentesque. Sed amet dolor penatibus sed at posuere justo, lacinia neque</p>
+        {% end_module_attribute %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row %}
+          {% dnd_module
+        path="../modules/listing-layouts",
+        offset=0,
+        width=12
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End Of Courses Listing Section #}
+
+{# Video Section #}
+{% include_dnd_partial path='../sections/two-column-video-text.html' %}
+{# End of Video Section #}
+
+{# Parnter Section #}
+{% dnd_section
+  padding={
+    "default" : {
+      "bottom" : "80px",
+      "top" : "80px"
+    },
+    "mobile" : {
+      "bottom" : "40px",
+      "top" : "40px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/our-partners",
+        offset=0,
+        width=12,
+        layout_choice={
+          "select_layout" : "listing"
+        },
+        partner_content=[ {
+          "content" : "<p>A Hubspot é uma plataforma de marketing que ajuda as empresas a crescer e se destacar no mercado.</p>",
+          "logo" : {
+            "alt" : "Hubspot Logo",
+            "height" : 40,
+            "loading" : "lazy",
+            "max_height" : 40,
+            "max_width" : 137,
+            "size_type" : "exact",
+            "src" : get_asset_url('../images/multipurpose/hubspot-two.png'),
+            "width" : 137
+          },
+          "partner_logo_link" : {
+            "no_follow" : false,
+            "open_in_new_tab" : false,
+            "url" : {
+              "href" : "https://www.hubspot.com/",
+              "type" : "EXTERNAL"
+            }
+          }
+        }, {
+          "content" : "<p>A Hubspot é uma plataforma de marketing que ajuda as empresas a crescer e se destacar no mercado.</p>",
+          "logo" : {
+            "alt" : "Capterra Logo",
+            "height" : 40,
+            "loading" : "lazy",
+            "max_height" : 40,
+            "max_width" : 175,
+            "size_type" : "exact",
+            "src" : get_asset_url('../images/multipurpose/capterra.png'),
+            "width" : 175
+          },
+          "partner_logo_link" : {
+            "no_follow" : false,
+            "open_in_new_tab" : false,
+            "url" : {
+              "href" : "https://www.capterra.com/",
+              "type" : "EXTERNAL"
+            }
+          }
+        }, {
+          "content" : "<p>A Hubspot é uma plataforma de marketing que ajuda as empresas a crescer e se destacar no mercado.</p>",
+          "logo" : {
+            "alt" : "Goodfirms Logo",
+            "height" : 40,
+            "loading" : "lazy",
+            "max_height" : 40,
+            "max_width" : 270,
+            "size_type" : "exact",
+            "src" : get_asset_url('../images/multipurpose/goodfirms.png'),
+            "width" : 270
+          },
+          "partner_logo_link" : {
+            "no_follow" : false,
+            "open_in_new_tab" : false,
+            "url" : {
+              "href" : "https://www.goodfirms.com/",
+              "type" : "EXTERNAL"
+            }
+          }
+        }, {
+            "content" : "<p>A Hubspot é uma plataforma de marketing que ajuda as empresas a crescer e se destacar no mercado.</p>",
+          "logo" : {
+            "alt" : "Crowd Logo",
+            "height" : 40,
+            "loading" : "lazy",
+            "max_height" : 40,
+            "max_width" : 142,
+            "size_type" : "exact",
+            "src" : get_asset_url('../images/multipurpose/crowd.png'),
+            "width" : 142
+          },
+          "partner_logo_link" : {
+            "no_follow" : false,
+            "open_in_new_tab" : false,
+            "url" : {
+              "href" : "https://growd.org/",
+              "type" : "EXTERNAL"
+            }
+          }
+        }, {
+          "content" : "<p>A Hubspot é uma plataforma de marketing que ajuda as empresas a crescer e se destacar no mercado.</p>",
+          "logo" : {
+            "alt" : "Trustpilot Logo",
+            "height" : 40,
+            "loading" : "lazy",
+            "max_height" : 40,
+            "max_width" : 162,
+            "size_type" : "exact",
+            "src" : get_asset_url('../images/multipurpose/trustpilot.png'),
+            "width" : 162
+          },
+          "partner_logo_link" : {
+            "no_follow" : false,
+            "open_in_new_tab" : false,
+            "url" : {
+              "href" : "https://www.trustpilot.com/",
+              "type" : "EXTERNAL"
+            }
+          }
+        } ],
+        show_content=false
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End of Parnter Section #}
+
+{# Get in Touch Section #}
+{% include_dnd_partial path='../sections/get-in-touch.html' %}
+{# End of Get in Touch Section #}
+
+{# Spacer Section #}
+{% dnd_section
+  padding={
+    "default" : {
+      "bottom" : "0px",
+      "left" : "0px",
+      "right" : "0px",
+      "top" : "0px"
+    }
+  }
+%}
+  {% dnd_column
+    offset=0,
+    width=12
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="../modules/spacer",
+        offset=0,
+        width=12,
+        style={
+          "height_desktop_" : 80,
+          "height_mobile_" : 50,
+          "height_tablet_" : 80
+        }
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}
+{# End of Spacer Section #}
+
+{% end_dnd_area %}
+
+{% endblock body %}

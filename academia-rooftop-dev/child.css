@@ -1,0 +1,30 @@
+/* @import url('http://example.com/example_style.css'); */
+
+/***********************************************/
+/* CSS @imports must be at the top of the file */
+/* Add them above this section                 */
+/***********************************************/
+
+/*****************************************/
+/* Start your style declarations here    */
+/*****************************************/
+
+/* Correção para o banner da página 404 - controla tamanho da imagem */
+.error-page__banner img,
+.system-page__banner img {
+  max-width: 100%;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Responsivo para mobile */
+@media (max-width: 992px) {
+  .error-page__banner img,
+  .system-page__banner img {
+    max-height: 150px;
+  }
+}

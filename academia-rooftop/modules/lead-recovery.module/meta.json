@@ -1,0 +1,9 @@
+{
+  "global" : true,
+  "content_types" : [ "SITE_PAGE", "CUSTOMER_PORTAL", "WEB_INTERACTIVE", "BLOG_LISTING" ],
+  "smart_type" : "NOT_SMART",
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 197320726438,
+  "label" : "Modulo Lead recovery ",
+  "is_available_for_new_content" : true
+}

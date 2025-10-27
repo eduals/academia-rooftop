@@ -13,6 +13,8 @@
   "license": "ISC",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.11",
+    "apexcharts": "^5.3.5",
+    "chart.js": "^4.5.0",
     "flowbite": "^3.1.2"
   }
 }

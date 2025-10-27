@@ -1,0 +1,9 @@
+{
+  "global" : true,
+  "content_types" : [ "KNOWLEDGE_BASE", "LANDING_PAGE", "SITE_PAGE", "CUSTOMER_PORTAL" ],
+  "smart_type" : "NOT_SMART",
+  "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST" ],
+  "module_id" : 196250027276,
+  "label" : "Solicitar materiais",
+  "is_available_for_new_content" : true
+}

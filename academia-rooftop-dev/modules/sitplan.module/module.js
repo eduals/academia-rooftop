@@ -45,8 +45,24 @@
           throw new Error('HTTP error! status: ' + response.status);
         }
 
-        var data = await response.json();
-        return data;
+        // Verificar se há conteúdo na resposta
+        var text = await response.text();
+
+        // Se a resposta estiver vazia, retornar objeto vazio
+        if (!text || text.trim() === '') {
+          console.log('📭 Nenhum indicador encontrado (resposta vazia)');
+          return { data: [] };
+        }
+
+        // Tentar fazer parse do JSON
+        try {
+          var data = JSON.parse(text);
+          return data;
+        } catch (parseError) {
+          console.error('⚠️ Erro ao fazer parse do JSON:', parseError);
+          console.log('📄 Resposta recebida:', text);
+          return { data: [] };
+        }
 
       } catch (error) {
         console.error('❌ Erro ao buscar indicadores:', error);
@@ -184,9 +200,13 @@
     renderIndicadores: function (indicadores) {
       if (!this.contentEl) return;
 
-      // Ordenar por num_week_day ascendente
+      // Ordenar por semana descendente (mais recente primeiro)
       indicadores.sort(function(a, b) {
-        return a.num_week_day - b.num_week_day;
+        // Primeiro por ano, depois por semana
+        if (a.num_ano !== b.num_ano) {
+          return b.num_ano - a.num_ano; // Ano mais recente primeiro
+        }
+        return b.num_semana - a.num_semana; // Semana mais recente primeiro
       });
 
       var html = '<div class="space-y-6">';
@@ -196,7 +216,7 @@
         <div class="flex justify-between items-center mb-4">
           <button
             onclick="window.sitplanModule.abrirModalLegenda()"
-            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            class="cursor-pointer inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             title="Como ler os indicadores"
           >
             <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -205,8 +225,8 @@
             Como Ler os Indicadores
           </button>
           <div class="flex gap-2">
-            <!-- Botão Salvar Alterações (inicialmente oculto) -->
-            <button
+
+          <!-- <button
               id="btn-salvar-alteracoes"
               onclick="window.sitplanModule.salvarTodasAlteracoes()"
               class="hidden inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
@@ -216,7 +236,7 @@
               </svg>
               <span id="btn-salvar-alteracoes-text">Salvar Alterações</span>
             </button>
-            <!-- Botão Cancelar (inicialmente oculto) -->
+
             <button
               id="btn-cancelar-alteracoes"
               onclick="window.sitplanModule.cancelarAlteracoes()"
@@ -224,10 +244,11 @@
             >
               Cancelar
             </button>
-            <!-- Botão Registrar -->
+            -->
+
             <button
-              onclick="window.sitplanModule.abrirModalRegistro()"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              onclick="window.sitplanModule.adicionarLinhaNovaTabela()"
+              class="cursor-pointer inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             >
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -254,40 +275,9 @@
     editedRows: {},
 
     initInlineEditing: function() {
-      var self = this;
-
-      // Adicionar event listeners a todas as células editáveis
-      var editableCells = document.querySelectorAll('.editable-cell');
-
-      editableCells.forEach(function(cell) {
-        // Ao focar, adicionar estilo de edição
-        cell.addEventListener('focus', function() {
-          this.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
-        });
-
-        // Ao perder foco, remover estilo e verificar mudanças
-        cell.addEventListener('blur', function() {
-          this.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
-          self.checkCellChange(this);
-        });
-
-        // Prevenir quebra de linha no contenteditable
-        cell.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            this.blur(); // Sair da edição ao pressionar Enter
-          }
-        });
-
-        // Aceitar apenas números
-        cell.addEventListener('input', function(e) {
-          var value = this.textContent.trim();
-          // Se não for número ou '-', reverter
-          if (value !== '-' && value !== '' && isNaN(value)) {
-            this.textContent = this.getAttribute('data-original-value');
-          }
-        });
-      });
+      // Event listeners agora são adicionados dinamicamente quando
+      // o modo de edição é ativado via ativarModoEdicaoLinha()
+      // Esta função é mantida para compatibilidade
     },
 
     checkCellChange: function(cell) {
@@ -527,7 +517,7 @@
               <!-- Header -->
               <div class="flex justify-between items-start mb-6">
                 <h3 class="text-xl font-bold text-gray-900">Como Ler os Indicadores</h3>
-                <button onclick="window.sitplanModule.fecharModalLegenda()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="window.sitplanModule.fecharModalLegenda()" class="cursor-pointer text-gray-400 hover:text-gray-600">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
@@ -982,8 +972,8 @@
         return `
           <div class="flex items-center gap-2 flex-wrap">
             <span
-              class="font-medium editable-cell"
-              contenteditable="true"
+              class="font-medium editable-cell cursor-pointer hover:bg-gray-100 px-1 rounded"
+              contenteditable="false"
               data-field="${fieldName}"
               data-original-value="${displayValue}"
               data-data-registro="${dataRegistro}"
@@ -1039,13 +1029,25 @@
       var itemDataJson = JSON.stringify(item).replace(/"/g, '&quot;');
 
       return `
-        <tr class="${rowClass} ${rowBgClass}" data-item='${itemDataJson}' data-data-registro="${item.data_registro}">
-          <td class="px-4 py-4 text-sm font-medium text-gray-900 sticky left-0 ${rowBgClass} z-10">
-            <div class="flex flex-col">
-              <div class="flex items-center gap-2">
-                ${semana}${indicador}
+        <tr class="${rowClass} ${rowBgClass} sitplan-data-row" data-item='${itemDataJson}' data-data-registro="${item.data_registro}">
+          <td class="px-4 py-4 text-sm font-medium text-gray-900 sticky left-0 ${rowBgClass} z-10 group relative">
+            <div class="flex items-center gap-2">
+              <div class="flex flex-col flex-1">
+                <div class="flex items-center gap-2">
+                  ${semana}${indicador}
+                </div>
+                ${periodoTexto ? `<span class="text-xs text-gray-500 italic">${periodoTexto}</span>` : ''}
               </div>
-              ${periodoTexto ? `<span class="text-xs text-gray-500 italic">${periodoTexto}</span>` : ''}
+              <!-- Ícone de editar (visível ao hover) -->
+              <button
+                onclick="window.sitplanModule.ativarModoEdicaoLinha('${item.data_registro}')"
+                class="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title="Editar esta linha"
+              >
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
             </div>
           </td>
           <td class="px-4 py-4 text-sm text-gray-500">
@@ -1098,22 +1100,15 @@
       this.hideAllSections();
       if (!this.contentEl) return;
 
-      var emptyStateHTML = `
-        <div class="text-center py-16">
-          <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-6">
-            <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
+      // Quando não há dados, mostrar tabela vazia com botão para adicionar
+      var html = '<div class="space-y-6">';
 
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum indicador cadastrado</h3>
-          <p class="text-gray-500 mb-8 max-w-sm mx-auto">
-            Você ainda não possui indicadores de performance cadastrados. Clique no botão abaixo para registrar seus primeiros indicadores.
-          </p>
-
+      // Botão de ação
+      html += `
+        <div class="flex justify-end mb-4">
           <button
-            onclick="window.sitplanModule.abrirModalRegistro()"
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            onclick="window.sitplanModule.adicionarLinhaNovaTabela()"
+            class="cursor-pointer inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -1123,178 +1118,193 @@
         </div>
       `;
 
-      this.contentEl.innerHTML = emptyStateHTML;
+      // Tabela vazia
+      html += this.generateTableHTML([]);
+
+      // Mensagem informativa
+      html += `
+        <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+            <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h3 class="text-sm font-medium text-gray-900 mb-1">Nenhum indicador cadastrado</h3>
+          <p class="text-xs text-gray-500">
+            Clique em "Registrar Indicadores" para adicionar sua primeira entrada
+          </p>
+        </div>
+      `;
+
+      html += '</div>';
+
+      this.contentEl.innerHTML = html;
       this.contentEl.style.display = 'block';
     },
 
 
     /**
-     * Abrir modal para registrar novos indicadores
+     * Adicionar linha nova editável diretamente na tabela
      */
-    abrirModalRegistro: function () {
-      var self = this;
+    adicionarLinhaNovaTabela: function() {
+      // Verificar se já existe uma linha nova
+      if (document.getElementById('nova-linha-indicador')) {
+        alert('Já existe uma linha de indicador em edição. Complete ou cancele antes de adicionar outra.');
+        return;
+      }
 
-      // Pegar a data de hoje no formato YYYY-MM-DD
+      // Desabilitar botão "Registrar Indicadores"
+      var btnRegistrar = document.querySelector('[onclick*="adicionarLinhaNovaTabela"]');
+      if (btnRegistrar) {
+        btnRegistrar.disabled = true;
+        btnRegistrar.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+
+      // Esconder botões de "Salvar Alterações" e "Cancelar" (se existirem)
+      var btnSalvarAlteracoes = document.getElementById('btn-salvar-alteracoes');
+      var btnCancelarAlteracoes = document.getElementById('btn-cancelar-alteracoes');
+      if (btnSalvarAlteracoes) btnSalvarAlteracoes.style.display = 'none';
+      if (btnCancelarAlteracoes) btnCancelarAlteracoes.style.display = 'none';
+
+      // Obter tbody da tabela
+      var tbody = document.querySelector('.sitplan-module tbody');
+      if (!tbody) return;
+
+      // Obter data de hoje
       var hoje = new Date();
       var dataHoje = hoje.toISOString().split('T')[0];
 
-      var modalHTML = `
-        <div id="modal-registro-indicadores" class="fixed inset-0 z-50 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
-          <div class="flex items-center justify-center min-h-screen px-4 py-8">
-            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6">
-              <!-- Header -->
-              <div class="flex justify-between items-start mb-6">
-                <div>
-                  <h3 class="text-xl font-bold text-gray-900">Registrar Indicadores de Performance</h3>
-                  <p class="text-sm text-gray-500 mt-1">Preencha os indicadores do dia</p>
-                </div>
-                <button onclick="window.sitplanModule.fecharModalRegistro()" class="text-gray-400 hover:text-gray-600">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
+      // Calcular informações da semana
+      var numSemana = this.getWeekNumber(hoje);
+      var periodo = this.getWeekPeriod(dataHoje);
+      var periodoTexto = periodo.inicio && periodo.fim ? periodo.inicio + ' a ' + periodo.fim : '';
+
+      // Criar linha nova com campos editáveis
+      var novaLinhaHTML = `
+        <tr id="nova-linha-indicador" class="bg-blue-50 border-2 border-blue-300">
+          <td class="px-4 py-4 text-sm font-medium text-gray-900 sticky left-0 bg-blue-50 z-10">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="text-blue-600 font-semibold">Nova Entrada</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  Semana ${numSemana}
+                </span>
               </div>
-
-              <!-- Formulário -->
-              <form id="form-registro-indicadores" class="space-y-6">
-                <!-- Data -->
-                <div>
-                  <label for="data_registro" class="block text-sm font-medium text-gray-700 mb-2">
-                    Data do Registro <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    id="data_registro"
-                    value="${dataHoje}"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <!-- Grid de Indicadores -->
-                <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
-                  ${this.generateFormFields()}
-                </div>
-
-                <!-- Mensagens -->
-                <div id="modal-registro-message" class="hidden"></div>
-
-                <!-- Footer -->
-                <div class="flex justify-end gap-3 pt-4 border-t">
-                  <button
-                    type="button"
-                    onclick="window.sitplanModule.fecharModalRegistro()"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    id="btn-salvar-indicadores"
-                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Salvar Indicadores
-                  </button>
-                </div>
-              </form>
+              <input
+                type="date"
+                id="nova-linha-data"
+                value="${dataHoje}"
+                required
+                class="mt-2 px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              ${periodoTexto ? `<span class="text-xs text-gray-500 italic mt-1">${periodoTexto}</span>` : ''}
             </div>
-          </div>
-        </div>
+          </td>
+          ${this.generateEditableCells()}
+          <td class="px-4 py-4 text-sm">
+            <div class="flex gap-2">
+              <button
+                onclick="window.sitplanModule.salvarLinhaNova()"
+                class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-transparent rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                title="Salvar indicadores"
+              >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Salvar
+              </button>
+              <button
+                onclick="window.sitplanModule.cancelarLinhaNova()"
+                class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                title="Cancelar"
+              >
+                Cancelar
+              </button>
+            </div>
+          </td>
+        </tr>
       `;
 
-      // Adicionar modal ao body
-      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      // Inserir no início do tbody
+      tbody.insertAdjacentHTML('afterbegin', novaLinhaHTML);
 
-      // Adicionar event listener ao formulário
-      var form = document.getElementById('form-registro-indicadores');
-      if (form) {
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-          self.salvarIndicadores();
+      // Adicionar event listeners para validação nas células novas
+      var celulasNovas = document.querySelectorAll('#nova-linha-indicador .nova-celula-editavel');
+      celulasNovas.forEach(function(celula) {
+        // Prevenir quebra de linha
+        celula.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur();
+          }
         });
+
+        // Aceitar apenas números
+        celula.addEventListener('input', function() {
+          var value = this.textContent.trim();
+          if (value !== '' && value !== '-' && isNaN(value)) {
+            // Reverter para vazio se não for número
+            this.textContent = '';
+          }
+        });
+      });
+
+      // Focar no primeiro campo editável
+      var primeiroInput = document.querySelector('#nova-linha-indicador .nova-celula-editavel');
+      if (primeiroInput) {
+        primeiroInput.focus();
       }
     },
 
-    generateFormFields: function() {
+    /**
+     * Gerar células editáveis para a nova linha
+     */
+    generateEditableCells: function() {
       var fields = [
-        { name: 'recomendacoes', label: 'Recomendações' },
-        { name: 'sitplan', label: 'Sitplan' },
-        { name: 'ligacoes_realizadas', label: 'Ligações Realizadas' },
-        { name: 'ligacoes_atendidas', label: 'Ligações Atendidas' },
-        { name: '1visita_marcada', label: '1ª Visita Marcada' },
-        { name: '1visita_realizada', label: '1ª Visita Realizada' },
-        { name: 'dentro_do_perfil', label: 'Dentro do Perfil' },
-        { name: 'docs_recebidos', label: 'Docs Recebidos' },
-        { name: 'imoveis_aprovados', label: 'Imóveis Aprovados' },
-        { name: '2visita_marcada', label: '2ª Visita Marcada' },
-        { name: '2visita_realizada', label: '2ª Visita Realizada' },
-        { name: 'ok_cliente', label: 'OK Cliente' },
-        { name: 'doc_enviado', label: 'Doc Enviado' },
-        { name: 'contrato_assinados', label: 'Contratos Assinados' }
+        'recomendacoes', 'sitplan', 'ligacoes_realizadas', 'ligacoes_atendidas',
+        '1visita_marcada', '1visita_realizada', 'dentro_do_perfil', 'docs_recebidos',
+        'imoveis_aprovados', '2visita_marcada', '2visita_realizada', 'ok_cliente',
+        'doc_enviado', 'contrato_assinados'
       ];
 
       return fields.map(function(field) {
         return `
-          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="space-y-3">
-              <!-- Campo de Número -->
-              <div>
-                <label for="${field.name}" class="block text-sm font-medium text-gray-700 mb-1">
-                  ${field.label}
-                </label>
-                <input
-                  type="number"
-                  id="${field.name}"
-                  name="${field.name}"
-                  min="0"
-                  placeholder="Digite o número"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <!-- Campo de Notas -->
-              <div>
-                <label for="${field.name}_notes" class="block text-sm font-medium text-gray-500 mb-1">
-                  Notas/Comentários
-                </label>
-                <textarea
-                  id="${field.name}_notes"
-                  name="${field.name}_notes"
-                  rows="2"
-                  placeholder="Observações sobre ${field.label.toLowerCase()}..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                ></textarea>
-              </div>
+          <td class="px-4 py-4 text-sm text-gray-500" style="vertical-align: top;">
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+              <div
+                class="nova-celula-editavel font-medium text-gray-900 px-3 py-2 border-2 border-blue-300 rounded min-w-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                contenteditable="true"
+                data-field="${field}"
+                spellcheck="false"
+                placeholder="0"
+                style="min-height: 36px; display: flex; align-items: center;"
+              ></div>
+              <textarea
+                class="nova-celula-notes w-full px-2 py-1.5 text-xs border-2 border-blue-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-400 bg-white resize-vertical"
+                data-field="${field}_notes"
+                placeholder="Comentários..."
+                rows="2"
+                spellcheck="false"
+                style="min-height: 48px; font-family: inherit;"
+              ></textarea>
             </div>
-          </div>
+          </td>
         `;
       }).join('');
     },
 
-
-    fecharModalRegistro: function () {
-      var modal = document.getElementById('modal-registro-indicadores');
-      if (modal) {
-        modal.remove();
-      }
-    },
-
-    salvarIndicadores: function() {
-      var self = this;
-
-      // Obter valores do formulário
-      var form = document.getElementById('form-registro-indicadores');
-      if (!form) return;
-
-      var dataRegistro = document.getElementById('data_registro').value;
-
-      if (!dataRegistro) {
-        this.showModalRegistroError('Por favor, informe a data do registro.');
+    /**
+     * Salvar linha nova
+     */
+    salvarLinhaNova: async function() {
+      // Obter data
+      var dataInput = document.getElementById('nova-linha-data');
+      if (!dataInput || !dataInput.value) {
+        alert('Por favor, informe a data do registro.');
         return;
       }
+
+      var dataRegistro = dataInput.value;
 
       // Calcular informações de data
       var data = new Date(dataRegistro + 'T00:00:00');
@@ -1315,34 +1325,47 @@
         num_week_day: numWeekDay
       };
 
-      // Adicionar campos de indicadores
-      var fields = [
-        'recomendacoes', 'sitplan', 'ligacoes_realizadas', 'ligacoes_atendidas',
-        '1visita_marcada', '1visita_realizada', 'dentro_do_perfil', 'docs_recebidos',
-        'imoveis_aprovados', '2visita_marcada', '2visita_realizada', 'ok_cliente',
-        'doc_enviado', 'contrato_assinados'
-      ];
+      // Coletar valores das células editáveis
+      var celulas = document.querySelectorAll('#nova-linha-indicador .nova-celula-editavel');
+      var algumValorPreenchido = false;
 
-      fields.forEach(function(field) {
-        var input = document.getElementById(field);
-        var notesInput = document.getElementById(field + '_notes');
+      celulas.forEach(function(celula) {
+        var field = celula.getAttribute('data-field');
+        var value = celula.textContent.trim();
 
-        // Se o campo estiver vazio, enviar null (não 0)
-        var value = input.value.trim() === '' ? null : parseInt(input.value);
-        var notes = notesInput.value.trim();
+        // Buscar o textarea de notes correspondente
+        var notesTextarea = document.querySelector('#nova-linha-indicador textarea[data-field="' + field + '_notes"]');
+        var notesValue = notesTextarea ? notesTextarea.value.trim() : '';
 
-        payload[field] = value;
-        payload[field + '_notes'] = notes;
+        // Se vazio ou "-", enviar null
+        if (value === '' || value === '-') {
+          payload[field] = null;
+          payload[field + '_notes'] = notesValue;
+        } else if (!isNaN(value)) {
+          payload[field] = parseInt(value);
+          payload[field + '_notes'] = notesValue;
+          algumValorPreenchido = true;
+        } else {
+          // Valor inválido
+          payload[field] = null;
+          payload[field + '_notes'] = notesValue;
+        }
       });
+
+      if (!algumValorPreenchido) {
+        if (!confirm('Nenhum valor foi preenchido. Deseja salvar mesmo assim?')) {
+          return;
+        }
+      }
 
       console.log('📤 Payload a ser enviado:', payload);
 
-      // Desabilitar botão e mostrar loading
-      var btnSalvar = document.getElementById('btn-salvar-indicadores');
+      // Mostrar loading nos botões
+      var btnSalvar = document.querySelector('#nova-linha-indicador button[onclick*="salvarLinhaNova"]');
       if (btnSalvar) {
         btnSalvar.disabled = true;
         btnSalvar.innerHTML = `
-          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg class="animate-spin -ml-1 mr-1 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
@@ -1350,55 +1373,304 @@
         `;
       }
 
-      // Enviar para API
-      var url = this.n8nConfig.baseUrl + this.n8nConfig.endpoints.save;
+      try {
+        // Enviar para API
+        await this.salvarIndicadorIndividual(payload);
 
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      })
-        .then(function (response) {
-          if (!response.ok) {
-            throw new Error('Erro HTTP: ' + response.status);
-          }
-          return response.text().then(function (text) {
-            try {
-              return text ? JSON.parse(text) : { success: true };
-            } catch (e) {
-              return { success: true, data: text };
-            }
-          });
-        })
-        .then(function (data) {
-          console.log('✅ Indicadores salvos com sucesso:', data);
-          self.showModalRegistroSuccess('Indicadores salvos com sucesso!');
+        console.log('✅ Indicadores salvos com sucesso');
 
-          // Fechar modal e recarregar após 1.5 segundos
-          setTimeout(function () {
-            self.fecharModalRegistro();
-            window.location.reload();
-          }, 1500);
-        })
-        .catch(function (error) {
-          console.error('❌ Erro ao salvar indicadores:', error);
-          self.showModalRegistroError('Erro ao salvar indicadores. Tente novamente.');
+        // Recarregar página após sucesso
+        window.location.reload();
 
-          // Restaurar botão
-          if (btnSalvar) {
-            btnSalvar.disabled = false;
-            btnSalvar.innerHTML = `
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-              Salvar Indicadores
-            `;
-          }
-        });
+      } catch (error) {
+        console.error('❌ Erro ao salvar indicadores:', error);
+        alert('Erro ao salvar indicadores. Tente novamente.');
+
+        // Restaurar botão
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = `
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Salvar
+          `;
+        }
+      }
     },
 
+    /**
+     * Cancelar linha nova
+     */
+    cancelarLinhaNova: function() {
+      // Remover linha
+      var novaLinha = document.getElementById('nova-linha-indicador');
+      if (novaLinha) {
+        novaLinha.remove();
+      }
+
+      // Reabilitar botão "Registrar Indicadores"
+      var btnRegistrar = document.querySelector('[onclick*="adicionarLinhaNovaTabela"]');
+      if (btnRegistrar) {
+        btnRegistrar.disabled = false;
+        btnRegistrar.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      // Mostrar novamente botões de "Salvar Alterações" e "Cancelar" (se existirem)
+      var btnSalvarAlteracoes = document.getElementById('btn-salvar-alteracoes');
+      var btnCancelarAlteracoes = document.getElementById('btn-cancelar-alteracoes');
+      if (btnSalvarAlteracoes) btnSalvarAlteracoes.style.display = '';
+      if (btnCancelarAlteracoes) btnCancelarAlteracoes.style.display = '';
+    },
+
+    /**
+     * Ativar modo de edição para uma linha específica
+     */
+    ativarModoEdicaoLinha: function(dataRegistro) {
+      var row = document.querySelector('tr[data-data-registro="' + dataRegistro + '"]');
+      if (!row) return;
+
+      // Verificar se já está em modo de edição
+      if (row.classList.contains('linha-em-edicao')) {
+        return;
+      }
+
+      // Adicionar classe de edição
+      row.classList.add('linha-em-edicao', 'bg-yellow-50', 'border-2', 'border-yellow-400');
+
+      // Esconder botões de "Salvar Alterações" e "Cancelar" do topo
+      var btnSalvarAlteracoes = document.getElementById('btn-salvar-alteracoes');
+      var btnCancelarAlteracoes = document.getElementById('btn-cancelar-alteracoes');
+      if (btnSalvarAlteracoes) btnSalvarAlteracoes.style.display = 'none';
+      if (btnCancelarAlteracoes) btnCancelarAlteracoes.style.display = 'none';
+
+      // Desabilitar botão "Registrar Indicadores"
+      var btnRegistrar = document.querySelector('[onclick*="adicionarLinhaNovaTabela"]');
+      if (btnRegistrar) {
+        btnRegistrar.disabled = true;
+        btnRegistrar.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+
+      // Pegar todas as células editáveis da linha
+      var celulasEditaveis = row.querySelectorAll('.editable-cell');
+
+      celulasEditaveis.forEach(function(celula) {
+        // Pegar o container da célula (div pai)
+        var celulaContainer = celula.parentElement;
+
+        // Esconder setas, percentuais e badges (todos os elementos seguintes)
+        var elementosIndicadores = celulaContainer.querySelectorAll('span:not(.editable-cell)');
+        elementosIndicadores.forEach(function(elem) {
+          elem.style.display = 'none';
+          elem.classList.add('hidden-in-edit');
+        });
+
+        // Destacar visualmente que está editável e aumentar tamanho
+        celula.classList.remove('cursor-pointer', 'hover:bg-gray-100', 'px-1');
+        celula.classList.add('ring-2', 'ring-yellow-400', 'bg-white', 'px-3', 'py-2', 'border-2', 'border-yellow-300', 'min-w-[80px]', 'inline-block');
+        celula.setAttribute('contenteditable', 'true');
+        celula.style.minHeight = '36px';
+        celula.style.display = 'inline-flex';
+        celula.style.alignItems = 'center';
+
+        // Adicionar event listeners para edição
+        // Prevenir quebra de linha
+        var preventEnter = function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur();
+          }
+        };
+
+        // Aceitar apenas números
+        var validateNumber = function() {
+          var value = this.textContent.trim();
+          if (value !== '-' && value !== '' && isNaN(value)) {
+            this.textContent = this.getAttribute('data-original-value');
+          }
+        };
+
+        celula.addEventListener('keydown', preventEnter);
+        celula.addEventListener('input', validateNumber);
+
+        // Armazenar referências para remover depois
+        celula._preventEnter = preventEnter;
+        celula._validateNumber = validateNumber;
+      });
+
+      // Adicionar botões de ação na primeira célula
+      var primeiraCelula = row.querySelector('td:first-child > div');
+      if (primeiraCelula) {
+        var botoesHTML = `
+          <div class="flex gap-1 mt-2 botoes-edicao-linha">
+            <button
+              onclick="window.sitplanModule.salvarEdicaoLinha('${dataRegistro}')"
+              class="inline-flex items-center px-2 py-1 text-xs font-medium text-white bg-green-600 border border-transparent rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              title="Salvar alterações"
+            >
+              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Salvar
+            </button>
+            <button
+              onclick="window.sitplanModule.cancelarEdicaoLinha('${dataRegistro}')"
+              class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              title="Cancelar edição"
+            >
+              Cancelar
+            </button>
+          </div>
+        `;
+        primeiraCelula.insertAdjacentHTML('beforeend', botoesHTML);
+      }
+
+      // Focar na primeira célula editável
+      if (celulasEditaveis.length > 0) {
+        celulasEditaveis[0].focus();
+      }
+    },
+
+    /**
+     * Salvar edição de linha
+     */
+    salvarEdicaoLinha: async function(dataRegistro) {
+      var row = document.querySelector('tr[data-data-registro="' + dataRegistro + '"]');
+      if (!row) return;
+
+      // Coletar mudanças
+      var camposAlterados = {};
+      var celulasEditaveis = row.querySelectorAll('.editable-cell');
+      var houveAlteracao = false;
+
+      celulasEditaveis.forEach(function(celula) {
+        var originalValue = celula.getAttribute('data-original-value');
+        var currentValue = celula.textContent.trim();
+        var field = celula.getAttribute('data-field');
+
+        if (currentValue !== originalValue) {
+          camposAlterados[field] = currentValue === '-' ? null : parseInt(currentValue);
+          houveAlteracao = true;
+        }
+      });
+
+      if (!houveAlteracao) {
+        alert('Nenhuma alteração foi feita.');
+        this.cancelarEdicaoLinha(dataRegistro);
+        return;
+      }
+
+      // Buscar dados completos da linha
+      var itemDataStr = row.getAttribute('data-item');
+      var item = JSON.parse(itemDataStr.replace(/&quot;/g, '"'));
+
+      // Montar payload completo
+      var payload = this.montarPayloadCompleto(item, camposAlterados);
+
+      // Mostrar loading
+      var btnSalvar = row.querySelector('.botoes-edicao-linha button[onclick*="salvarEdicaoLinha"]');
+      if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-1 h-3 w-3 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Salvando...
+        `;
+      }
+
+      try {
+        // Enviar para API
+        await this.salvarIndicadorIndividual(payload);
+
+        console.log('✅ Linha salva com sucesso');
+
+        // Recarregar página
+        window.location.reload();
+
+      } catch (error) {
+        console.error('❌ Erro ao salvar linha:', error);
+        alert('Erro ao salvar alterações. Tente novamente.');
+
+        // Restaurar botão
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = `
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Salvar
+          `;
+        }
+      }
+    },
+
+    /**
+     * Cancelar edição de linha
+     */
+    cancelarEdicaoLinha: function(dataRegistro) {
+      var row = document.querySelector('tr[data-data-registro="' + dataRegistro + '"]');
+      if (!row) return;
+
+      // Remover classe de edição
+      row.classList.remove('linha-em-edicao', 'bg-yellow-50', 'border-2', 'border-yellow-400');
+
+      // Reverter células aos valores originais
+      var celulasEditaveis = row.querySelectorAll('.editable-cell');
+      celulasEditaveis.forEach(function(celula) {
+        celula.textContent = celula.getAttribute('data-original-value');
+
+        // Remover classes de edição
+        celula.classList.remove('ring-2', 'ring-yellow-400', 'bg-white', 'px-3', 'py-2', 'border-2', 'border-yellow-300', 'min-w-[80px]', 'inline-block');
+
+        // Restaurar classes originais
+        celula.classList.add('cursor-pointer', 'hover:bg-gray-100', 'px-1');
+        celula.setAttribute('contenteditable', 'false');
+
+        // Remover estilos inline
+        celula.style.minHeight = '';
+        celula.style.display = '';
+        celula.style.alignItems = '';
+
+        // Mostrar novamente os indicadores escondidos (setas, %, badges)
+        var celulaContainer = celula.parentElement;
+        var elementosEscondidos = celulaContainer.querySelectorAll('.hidden-in-edit');
+        elementosEscondidos.forEach(function(elem) {
+          elem.style.display = '';
+          elem.classList.remove('hidden-in-edit');
+        });
+
+        // Remover event listeners
+        if (celula._preventEnter) {
+          celula.removeEventListener('keydown', celula._preventEnter);
+          delete celula._preventEnter;
+        }
+        if (celula._validateNumber) {
+          celula.removeEventListener('input', celula._validateNumber);
+          delete celula._validateNumber;
+        }
+      });
+
+      // Remover botões de ação
+      var botoes = row.querySelector('.botoes-edicao-linha');
+      if (botoes) {
+        botoes.remove();
+      }
+
+      // Mostrar novamente botões de "Salvar Alterações" e "Cancelar" do topo
+      var btnSalvarAlteracoes = document.getElementById('btn-salvar-alteracoes');
+      var btnCancelarAlteracoes = document.getElementById('btn-cancelar-alteracoes');
+      if (btnSalvarAlteracoes) btnSalvarAlteracoes.style.display = '';
+      if (btnCancelarAlteracoes) btnCancelarAlteracoes.style.display = '';
+
+      // Reabilitar botão "Registrar Indicadores"
+      var btnRegistrar = document.querySelector('[onclick*="adicionarLinhaNovaTabela"]');
+      if (btnRegistrar) {
+        btnRegistrar.disabled = false;
+        btnRegistrar.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    },
 
     // Função auxiliar para calcular número da semana
     getWeekNumber: function(date) {
@@ -1435,39 +1707,7 @@
         inicio: formatarData(inicioSemana),
         fim: formatarData(fimSemana)
       };
-    },
-
-    showModalRegistroError: function (message) {
-      var messageDiv = document.getElementById('modal-registro-message');
-      if (messageDiv) {
-        messageDiv.className = 'p-3 bg-red-50 border border-red-200 rounded-lg';
-        messageDiv.innerHTML = `
-          <div class="flex gap-2">
-            <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-            </svg>
-            <p class="text-sm text-red-800">${message}</p>
-          </div>
-        `;
-        messageDiv.classList.remove('hidden');
-      }
-    },
-
-    showModalRegistroSuccess: function (message) {
-      var messageDiv = document.getElementById('modal-registro-message');
-      if (messageDiv) {
-        messageDiv.className = 'p-3 bg-green-50 border border-green-200 rounded-lg';
-        messageDiv.innerHTML = `
-          <div class="flex gap-2">
-            <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-            </svg>
-            <p class="text-sm text-green-800">${message}</p>
-          </div>
-        `;
-        messageDiv.classList.remove('hidden');
-      }
-    },
+    }
 
   };
 

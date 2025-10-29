@@ -434,7 +434,7 @@
       if (leadRecuperado && enteredMql) {
         // Fire icon - Lead recuperado que passou por MQL
         leadIcon = `
-          <span title="Lead recuperado - MQL" class="inline-flex">
+          <span title="Lead recuperado - Passou por MQL" class="inline-flex">
             <svg class="w-4 h-4 text-orange-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"></path>
             </svg>
@@ -509,7 +509,16 @@
             ${data}
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <span class="px-2 py-1 text-xs rounded-full ${prioridade.color}">${prioridade.label}</span>
+            <div
+              class="inline-block cursor-pointer hover:opacity-80 transition-opacity"
+              data-priority-cell
+              data-ticket-id="${negocio.ticket_franquia_id}"
+              data-priority="${prioridade.value}"
+              onclick="event.stopPropagation(); window.negociosModule.abrirEdicaoPrioridade(this, event)"
+              title="Clique para editar a prioridade"
+            >
+              <span class="px-2 py-1 text-xs rounded-full ${prioridade.color}">${prioridade.label}</span>
+            </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
             <span class="px-2 py-1 text-xs rounded-full ${diasEsteira.color}">${diasEsteira.dias} dias</span>
@@ -635,6 +644,10 @@
         '1043275526': { label: 'Aguardando documentos complementares', color: 'bg-yellow-100 text-yellow-800' },
         '1043275527': { label: 'Em análise do backoffice', color: 'bg-purple-100 text-purple-800' },
         '1062003577': { label: 'Apresentação da proposta', color: 'bg-indigo-100 text-indigo-800' },
+        
+        '1186972699': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
+        '1206453052': { label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+
         '1062003578': { label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
         '1095528865': { label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
         '1095528866': { label: 'Reajuste da proposta', color: 'bg-orange-100 text-orange-800' },
@@ -652,13 +665,13 @@
 
     getPrioridadeInfo: function (priority) {
       var prioridadeMap = {
-        'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800' },
-        'MEDIUM': { label: 'Média', color: 'bg-yellow-100 text-yellow-800' },
-        'HIGH': { label: 'Alta', color: 'bg-orange-100 text-orange-800' },
-        'URGENT': { label: 'Urgente', color: 'bg-red-100 text-red-800' }
+        'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
+        'MEDIUM': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },
+        'HIGH': { label: 'Alta', color: 'bg-orange-100 text-orange-800', value: 'HIGH' },
+        'URGENT': { label: 'Urgente', color: 'bg-red-100 text-red-800', value: 'URGENT' }
       };
 
-      return prioridadeMap[priority] || { label: 'Não definida', color: 'bg-gray-100 text-gray-800' };
+      return prioridadeMap[priority] || { label: 'Não definida', color: 'bg-gray-100 text-gray-800', value: 'MEDIUM' };
     },
 
     getDiasNaEsteira: function (createDate) {
@@ -1372,7 +1385,7 @@
 
       // Enviar para endpoints N8N
       Promise.all([
-        this.enviarParaN8N('updateTicket', updateData),
+        // this.enviarParaN8N('updateTicket', updateData),
         this.enviarParaN8N('updateDeal', updateData)
       ])
         .then(function (responses) {
@@ -1581,6 +1594,202 @@
           btnLoading.classList.add('hidden');
         }
       }
+    },
+
+    /**
+     * Abrir edição inline de prioridade
+     * @param {HTMLElement} cell - Célula clicada
+     * @param {Event} event - Evento de click original
+     */
+    abrirEdicaoPrioridade: function (cell, event) {
+      var self = this;
+
+      // Prevenir propagação do evento
+      if (event) {
+        event.stopPropagation();
+      }
+
+      // Fechar qualquer editor aberto
+      this.fecharEdicaoPrioridade();
+
+      var ticketId = cell.getAttribute('data-ticket-id');
+      var currentPriority = cell.getAttribute('data-priority');
+
+      // Criar select inline
+      var selectHTML = `
+        <select
+          id="priority-editor-${ticketId}"
+          class="px-2 py-1 text-xs rounded-lg border border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white cursor-pointer"
+          data-ticket-id="${ticketId}"
+          data-original-priority="${currentPriority}"
+        >
+          <option value="LOW" ${currentPriority === 'LOW' ? 'selected' : ''}>Baixa</option>
+          <option value="MEDIUM" ${currentPriority === 'MEDIUM' ? 'selected' : ''}>Média</option>
+          <option value="HIGH" ${currentPriority === 'HIGH' ? 'selected' : ''}>Alta</option>
+          <option value="URGENT" ${currentPriority === 'URGENT' ? 'selected' : ''}>Urgente</option>
+        </select>
+      `;
+
+      // Substituir conteúdo da célula pelo select
+      cell.innerHTML = selectHTML;
+
+      var selectElement = document.getElementById('priority-editor-' + ticketId);
+
+      if (selectElement) {
+        // Prevenir propagação de eventos do select
+        selectElement.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+
+        selectElement.addEventListener('mousedown', function(e) {
+          e.stopPropagation();
+        });
+
+        // Focar no select imediatamente
+        selectElement.focus();
+
+        // Event listener para mudança de valor (salvar)
+        selectElement.addEventListener('change', function () {
+          var newPriority = this.value;
+          var originalPriority = this.getAttribute('data-original-priority');
+
+          // Só atualizar se realmente mudou
+          if (newPriority !== originalPriority) {
+            self.atualizarPrioridade(ticketId, newPriority, cell);
+          }
+        });
+
+        // Event listener para ESC (cancelar)
+        selectElement.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            self.fecharEdicaoPrioridade(cell, currentPriority);
+          }
+        });
+
+        // Event listener para click fora do select (fechar sem salvar)
+        // Delay maior para garantir que o evento inicial já foi processado
+        setTimeout(function() {
+          document.addEventListener('click', function clickOutsideHandler(e) {
+            // Verificar se o click foi fora do select
+            if (selectElement && !selectElement.contains(e.target)) {
+              self.fecharEdicaoPrioridade(cell, currentPriority);
+              document.removeEventListener('click', clickOutsideHandler);
+            }
+          });
+        }, 300);
+      }
+    },
+
+    /**
+     * Atualizar prioridade via N8N
+     * @param {string} ticketId - ID do ticket
+     * @param {string} newPriority - Nova prioridade (LOW/MEDIUM/HIGH/URGENT)
+     * @param {HTMLElement} cell - Célula para atualizar
+     */
+    atualizarPrioridade: function (ticketId, newPriority, cell) {
+      var self = this;
+
+      // Mostrar loading
+      cell.innerHTML = `
+        <div class="inline-flex items-center px-2 py-1">
+          <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      `;
+
+      // Preparar dados para N8N (formato simplificado)
+      var updateData = {
+        objectId: ticketId,
+        hs_ticket_priority: newPriority
+      };
+
+      console.log('📤 Atualizando prioridade:', updateData);
+
+      // Enviar para N8N
+      var endpointUrl = this.n8nConfig.baseUrl + this.n8nConfig.endpoints.updateTicket;
+
+      fetch(endpointUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('Erro HTTP: ' + response.status);
+          }
+          return response.text().then(function (text) {
+            try {
+              return text ? JSON.parse(text) : { success: true };
+            } catch (e) {
+              return { success: true, data: text };
+            }
+          });
+        })
+        .then(function (responseData) {
+          // console.log('✅ Prioridade atualizada:', responseData);
+
+          // Atualizar célula com novo valor
+          var prioridadeInfo = self.getPrioridadeInfo(newPriority);
+          cell.setAttribute('data-priority', newPriority);
+          cell.innerHTML = `
+            <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
+          `;
+
+          // Mostrar feedback de sucesso
+          cell.classList.add('bg-green-50');
+          setTimeout(function () {
+            cell.classList.remove('bg-green-50');
+          }, 1000);
+        })
+        .catch(function (error) {
+          console.error('❌ Erro ao atualizar prioridade:', error);
+
+          // Mostrar erro e restaurar valor original
+          cell.innerHTML = `
+            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Erro ao salvar</span>
+          `;
+
+          // Recarregar tabela após 2 segundos
+          setTimeout(function () {
+            self.reloadTable();
+          }, 2000);
+        });
+    },
+
+    /**
+     * Fechar editor de prioridade
+     * @param {HTMLElement} cell - Célula para restaurar (opcional)
+     * @param {string} priority - Prioridade a restaurar (opcional)
+     */
+    fecharEdicaoPrioridade: function (cell, priority) {
+      // Se cell e priority forem fornecidos, restaurar valor
+      if (cell && priority) {
+        var prioridadeInfo = this.getPrioridadeInfo(priority);
+        cell.innerHTML = `
+          <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
+        `;
+      }
+
+      // Remover todos os editores abertos
+      var editors = document.querySelectorAll('[id^="priority-editor-"]');
+      editors.forEach(function (editor) {
+        var ticketId = editor.getAttribute('data-ticket-id');
+        var originalPriority = editor.getAttribute('data-original-priority');
+
+        if (ticketId && originalPriority) {
+          var parentCell = editor.closest('[data-priority-cell]');
+          if (parentCell) {
+            var prioridadeInfo = window.negociosModule.getPrioridadeInfo(originalPriority);
+            parentCell.innerHTML = `
+              <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
+            `;
+          }
+        }
+      });
     },
 
 

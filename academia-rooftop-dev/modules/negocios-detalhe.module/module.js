@@ -7,7 +7,42 @@
     modalPhotos: [],
     currentModalPhotoIndex: 0,
     isDocumentosComplementaresCreated: false,
-    
+
+    // Mapeamento dos motivos de descarte (quando imóvel não está dentro dos parâmetros)
+    motivosDescarte: {
+      'politica_regiao': 'Política de região',
+      'politica_cep': 'Política de CEP',
+      'politica_valor': 'Política de valor',
+      'politica_padrao_construtivo': 'Política de padrão construtivo',
+      'politica_tipo_imovel': 'Política de tipo de imóvel',
+      'documentacao_irregular': 'Imóvel com documentação irregular',
+      'lead_duplicado': 'Lead Duplicado',
+      'recusado_comite_interno': 'Recusado - Comitê interno',
+      'recusado_comite_investidor': 'Recusado - Comitê investidor',
+      'recusado_analise_renda': 'Recusado - Análise de renda',
+      'recusado_juridico': 'Recusado - Jurídico',
+      'recusado_analise_proprietario': 'Recusado - Análise do proprietário',
+      'pediu_descartar': 'Pediu para descartar'
+    },
+
+    // Mapeamento dos motivos de perda (quando cliente não quer seguir)
+    motivosPerda: {
+      'valor_avaliacao': 'Valor de avaliação',
+      'valor_aluguel': 'Valor do aluguel',
+      'valor_liquidez': 'Valor de liquidez',
+      'prazo_recompra': 'Prazo de recompra',
+      'sem_necessidade_imediata': 'Sem necessidade imediata - Interessado',
+      'produtos_mercado_venda': 'Produtos de mercado - Venda do imóvel',
+      'produtos_mercado_emprestimo': 'Produtos de mercado - Empréstimo',
+      'produtos_mercado_outros': 'Produtos de mercado - Outros',
+      'influencias_familiares': 'Influências familiares',
+      'contato_sem_sucesso': 'Contato sem sucesso',
+      'contato_parou_responder': 'Contato parou de responder',
+      'nao_informou': 'Não informou o motivo',
+      'negativo_sem_interesse': 'Negativo - Sem interesse',
+      'pediu_descartar': 'Pediu para descartar'
+    },
+
     // Helper function para mostrar toasts
     showToast: function(message, type) {
       var backgroundColor = '#10b981'; // success (green)
@@ -150,13 +185,12 @@
 
             // Inicializa a lista de documentos complementares
             function waitForDocuments() {
-              console.log('waiting')
+              
               if (self.isDocumentosComplementaresCreated && document.getElementById('documents-list')) {
                 console.log('entrou no render')
                 self.renderDocumentsList();
               } else {
-                console.log('vamos aguardar mais 200')
-                setTimeout(waitForDocuments, 200);
+                setTimeout(waitForDocuments, 300);
               }
             }
             waitForDocuments();
@@ -173,10 +207,8 @@
         function waitForDocuments() {
           console.log('waiting')
           if (self.isDocumentosComplementaresCreated && document.getElementById('documents-list')) {
-            console.log('entrou no render')
             self.renderDocumentsList();
           } else {
-            console.log('vamos aguardar mais 200')
             setTimeout(waitForDocuments, 200);
           }
         }
@@ -202,14 +234,28 @@
                             Voltar
                         </button>
                         <h1 class="text-3xl font-bold text-slate-900 mt-2">${negocio.dealname || 'Detalhes do Negócio'}</h1>
-                        <span class="badge ${ticketStatus.colorClass} mt-2">${ticketStatus.label}</span>
+                        <div class="flex items-center gap-2 mt-2">
+                            <div
+                              class="inline-block cursor-pointer hover:opacity-80 transition-opacity"
+                              data-priority-cell-header
+                              data-ticket-id="${ticket ? ticket.hs_object_id : ''}"
+                              data-priority="${ticket ? ticket.hs_ticket_priority : 'MEDIUM'}"
+                              onclick="event.stopPropagation(); window.negocioDetalheModule.abrirEdicaoPrioridadeHeader(this, event)"
+                              title="Clique para editar a prioridade"
+                            >
+                                ${this.getPriorityBadgeHTML(ticket ? ticket.hs_ticket_priority : null)}
+                            </div>
+                            <span class="badge ${ticketStatus.colorClass} text-sm">${ticketStatus.label}</span>
+                        </div>
                     </div>
-                   <!-- <div class="flex items-center gap-3">
+                    
+                    <!-- <div class="flex items-center gap-3">
                         <button onclick="window.negocioDetalheModule.openRegistrarAtividade()" class="btn btn-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
                             Registrar Atividade
                         </button>
-                    </div>  -->
+                    </div>
+                    -->  
                 </div>
             </header>
 
@@ -254,7 +300,36 @@
         const progress = this.getFunnelProgress(ticketPortal.hs_pipeline_stage, ticketPortal);
         const steps = progress.steps;
         const currentIndex = progress.currentIndex;
-        if (currentIndex < 0) return '';
+
+        // 🔴 LOG DE DEBUG: Identificar quando currentIndex não é encontrado
+        if (currentIndex < 0) {
+          console.error('❌ [ERRO CRÍTICO] currentIndex não encontrado!', {
+            currentStageId: ticketPortal.hs_pipeline_stage,
+            steps: steps.map(s => ({ id: s.id, label: s.label, combinedIds: s.combinedIds })),
+            ticketData: ticketPortal
+          });
+
+          // Fallback: Exibir mensagem de erro amigável ao usuário
+          const statusInfo = this.getTicketStatusInfo(ticketPortal.hs_pipeline_stage);
+          return `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+              <div class="flex items-start">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-yellow-800">Etapa não mapeada no funil</h3>
+                  <p class="mt-2 text-sm text-yellow-700">
+                    A etapa atual "<strong>${statusInfo.label}</strong>" (ID: ${ticketPortal.hs_pipeline_stage}) não está mapeada corretamente no funil de progresso.
+                    Entre em contato com o suporte técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
 
         // Verificar faixa de valor do imóvel para avaliação externa
         // const faixaValorRaw = negocio?.qual_a_faixa_de_valor_do_seu_imovel_;
@@ -288,7 +363,8 @@
         const segundaPropostaLiberada = ticket?.segunda_proposta_liberada === 'Sim' || ticket?.segunda_proposta_liberada === true;
 
         console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Segunda proposta liberada?', segundaPropostaLiberada);
-
+        // TODO: remover console.log do ticket
+        console.log('ticketticketticket', ticketPortal)
         // ⚠️ WARN DE AVALIAÇÃO EXTERNA MOVIDO PARA O NEXTSTEPINFO
         // A lógica de exibição do warn agora está dentro da função getNextStepInfo()
         // na etapa "Avaliação externa" ao invés de no topo do progress stepper
@@ -311,18 +387,18 @@
 
             if (isCompleted) {
                 // Verificar se há data de conclusão para determinar a cor
-                const completionDate = this.getStepCompletionDate(step.id, ticketPortal);
+                const completionDate = this.getStepCompletionDate(step.id, ticketPortal, ticketPortal.hs_pipeline_stage);
                 const hasCompletionDate = !!completionDate;
-                
+                console.log('hasCompletionDate', hasCompletionDate, completionDate)
                 statusClass = 'text-green-700';
                 ringClass = 'bg-green-100';
-                // if (hasCompletionDate) {
-                //     // Etapa com data - cor verde
-                // } else {
-                //     // Etapa sem data - cor cinza
-                //     statusClass = 'text-gray-600';
-                //     ringClass = 'bg-gray-100';
-                // }
+                if (hasCompletionDate) {
+                    // Etapa com data - cor verde
+                } else {
+                    // Etapa sem data - cor cinza
+                    statusClass = 'text-gray-600';
+                    ringClass = 'bg-gray-100';
+                }
                 
                 icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
                 containerClass = '';
@@ -337,10 +413,11 @@
             
             if (isCompleted) {
                 // Etapa concluída - mostrar data de conclusão dinâmica
-                const completionDate = this.getStepCompletionDate(step.id, ticketPortal);
+                const completionDate = this.getStepCompletionDate(step.id, ticketPortal, ticketPortal.hs_pipeline_stage);
+                console.log('completionDate: ', step.id , ' > ',  step.label, ' >>> VALOR:', completionDate, 'TIPO:', typeof completionDate);
                 const hasCompletionDate = !!completionDate;
-                // const titleColor = hasCompletionDate ? 'text-green-600' : 'text-gray-600';
-                const titleColor = true ? 'text-green-600' : 'text-gray-600';
+                const titleColor = hasCompletionDate ? 'text-green-600' : 'text-gray-600';
+                // const titleColor = true ? 'text-green-600' : 'text-gray-600';
                 const dateText = completionDate ? `Concluído em ${completionDate}` : 'Data de conclusão não disponível';
                 content = `
                     <div class="pt-1 ml-4">
@@ -628,130 +705,234 @@
             },
             'Avaliação externa': {
                 description: function(ticketData) {
-                    // Verificar se a avaliação já foi realizada (tem link do laudo)
-                    const avaliacaoJaRealizada = ticketData?.upload_do_laudo && ticketData.upload_do_laudo.trim() !== '';
+                    try {
+                        console.log('TicketData >> ', ticketData);
 
-                    // Verificar se a avaliação foi solicitada
-                    const avaliacaoSolicitada = ticketData?.solicitar_avaliacao_externa[0] === 'Sim' || ticketData?.solicitar_avaliacao_externa[0] === true;
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação já foi realizada (tem link do laudo)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo &&
+                                                     typeof ticketData.upload_do_laudo === 'string' &&
+                                                     ticketData.upload_do_laudo.trim() !== '';
 
-                    // Converter e verificar se precisa de avaliação externa
-                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
-                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
-                    const precisaAvaliacaoExterna = valorMedioAmostrasNumero >= 2000000;
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação foi solicitada
+                        let avaliacaoSolicitada = false;
 
-                    // Caso 1: Avaliação já realizada (tem laudo)
-                    if (avaliacaoJaRealizada) {
-                        return `
-                            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div class="flex items-start">
-                                    <svg class="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-semibold text-green-800">Avaliação Externa Concluída</p>
-                                        <p class="text-sm text-green-700 mt-1">
-                                            A avaliação externa do imóvel foi realizada. O laudo está disponível para consulta.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    // Caso 2: Avaliação solicitada mas ainda sem laudo (em progresso)
-                    if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
-                        return `
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div class="flex items-start">
-                                    <svg class="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-                                    </svg>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-semibold text-blue-800">Avaliação Externa em Progresso</p>
-                                        <p class="text-sm text-blue-700 mt-1">
-                                            A solicitação de avaliação externa foi realizada. Em breve você será notificado quando ela for concluída.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    // Caso 3: Precisa de avaliação mas ainda não foi solicitada
-                    if (precisaAvaliacaoExterna) {
-                        let mensagemFaixa = '';
-                        if (valorMedioAmostrasNumero > 3000000) {
-                            mensagemFaixa = 'Este imóvel está na faixa de <strong>R$ 3 milhões a R$ 6 milhões</strong> e requer avaliação externa obrigatória.';
-                        } else if (valorMedioAmostrasNumero > 2000000) {
-                            mensagemFaixa = 'Imóveis com valor superior a <strong>R$ 2.000.000,00</strong> nesta faixa requerem avaliação externa obrigatória.';
-                        } else {
-                            mensagemFaixa = 'Este imóvel pode requerer avaliação externa obrigatória por causa do valor médio das amostras.';
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            // Verificar se é array e tem elementos
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa[0] === true;
+                            }
+                            // Se não for array, verificar diretamente o valor
+                            else if (typeof ticketData.solicitar_avaliacao_externa === 'string' ||
+                                     typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa === true;
+                            }
                         }
 
-                        return `
-                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                <div class="flex items-start">
-                                    <svg class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                    <div class="flex-1">
-                                        <p class="text-sm font-semibold text-amber-800">Avaliação Externa Necessária</p>
-                                        <p class="text-sm text-amber-700 mt-1">
-                                            ${mensagemFaixa}
-                                        </p>
+                        // Converter e verificar se precisa de avaliação externa
+                        const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                        const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+                        const precisaAvaliacaoExterna = valorMedioAmostrasNumero >= 2000000;
+
+                        // Caso 1: Avaliação já realizada (tem laudo)
+                        if (avaliacaoJaRealizada) {
+                            return `
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-green-800">Avaliação Externa Concluída</p>
+                                            <p class="text-sm text-green-700 mt-1">
+                                                A avaliação externa do imóvel foi realizada. O laudo está disponível para consulta.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `;
-                    }
+                            `;
+                        }
 
-                    // Caso padrão: não precisa de avaliação externa
-                    return 'Solicitar avaliação externa do imóvel, se necessário.';
+                        // Caso 2: Avaliação solicitada mas ainda sem laudo (em progresso)
+                        if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                            return `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-blue-800">Avaliação Externa em Progresso</p>
+                                            <p class="text-sm text-blue-700 mt-1">
+                                                A solicitação de avaliação externa foi realizada. Em breve você será notificado quando ela for concluída.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Caso 3: Precisa de avaliação mas ainda não foi solicitada
+                        if (precisaAvaliacaoExterna) {
+                            let mensagemFaixa = '';
+                            if (valorMedioAmostrasNumero > 3000000) {
+                                mensagemFaixa = 'Este imóvel está na faixa de <strong>R$ 3 milhões a R$ 6 milhões</strong> e requer avaliação externa obrigatória.';
+                            } else if (valorMedioAmostrasNumero > 2000000) {
+                                mensagemFaixa = 'Imóveis com valor superior a <strong>R$ 2.000.000,00</strong> nesta faixa requerem avaliação externa obrigatória.';
+                            } else {
+                                mensagemFaixa = 'Este imóvel pode requerer avaliação externa obrigatória por causa do valor médio das amostras.';
+                            }
+
+                            return `
+                                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-amber-800">Avaliação Externa Necessária</p>
+                                            <p class="text-sm text-amber-700 mt-1">
+                                                ${mensagemFaixa}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Caso padrão: não precisa de avaliação externa
+                        return 'Solicitar avaliação externa do imóvel, se necessário.';
+
+                    } catch (error) {
+                        console.error('❌ [ERRO] Erro ao processar descrição da Avaliação Externa:', error);
+                        return 'Erro ao carregar informações da avaliação externa. Entre em contato com o suporte.';
+                    }
                 },
                 actionButton: function(ticketData) {
-                    // Verificar se a avaliação já foi realizada (tem link do laudo)
-                    console.log('ticketData', ticketData)
-                    const avaliacaoJaRealizada = ticketData?.upload_do_laudo && ticketData.upload_do_laudo.trim() !== '';
-                    // console.log('avaliacaoJaRealizada:: ', avaliacaoJaRealizada)
-                    // console.log('upload_do_laudo:: ', ticketData?.upload_do_laudo)
-                    // console.log('solicitar_avaliacao_externa:: ', ticketData?.solicitar_avaliacao_externa[0])
-                    // Verificar se a avaliação foi solicitada
-                    const avaliacaoSolicitada = ticketData?.solicitar_avaliacao_externa[0] === 'Sim' || ticketData?.solicitar_avaliacao_externa[0] === true;
-                    // console.log('avaliacaoSolicitada', avaliacaoSolicitada)
-                    // Caso 1: Avaliação já realizada - mostrar botão para baixar laudo
-                    // if (avaliacaoJaRealizada) {
-                    //     return `
-                    //         <button onclick="window.negocioDetalheModule.downloadAvaliacaoExterna()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    //             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    //                 <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
-                    //             </svg>
-                    //             Baixar Laudo de Avaliação
-                    //         </button>
-                    //     `;
-                    // }
+                    try {
+                        console.log('ticketData', ticketData);
 
-                    if (!avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação já foi realizada (tem link do laudo)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo &&
+                                                     typeof ticketData.upload_do_laudo === 'string' &&
+                                                     ticketData.upload_do_laudo.trim() !== '';
 
-                      return `
-                          <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" class="mt-2 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                              </svg>
-                              Solicitar Avaliação Externa
-                          </button>
-                      `;
-                    }
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação foi solicitada
+                        let avaliacaoSolicitada = false;
 
-                    // Caso 2: Avaliação solicitada mas pendente - não mostrar botão
-                    // if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            // Verificar se é array e tem elementos
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa[0] === true;
+                            }
+                            // Se não for array, verificar diretamente o valor
+                            else if (typeof ticketData.solicitar_avaliacao_externa === 'string' ||
+                                     typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa === true;
+                            }
+                        }
+                        // console.log('avaliacaoSolicitada', avaliacaoSolicitada)
+                        // Caso 1: Avaliação já realizada - mostrar botão para baixar laudo
+                        // if (avaliacaoJaRealizada) {
+                        //     return `
+                        //         <button onclick="window.negocioDetalheModule.downloadAvaliacaoExterna()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        //             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        //                 <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                        //             </svg>
+                        //             Baixar Laudo de Avaliação
+                        //         </button>
+                        //     `;
+                        // }
+
+                        if (!avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                            return `
+                                <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" class="mt-2 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Solicitar Avaliação Externa
+                                </button>
+                            `;
+                        }
+
+                        // Caso 2: Avaliação solicitada mas pendente - não mostrar botão
+                        // if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
                         return ''; // Sem botão - só a mensagem de progresso
-                    // }
+                        // }
 
-                    // Caso 3: Avaliação não solicitada - mostrar botão de solicitar
+                        // Caso 3: Avaliação não solicitada - mostrar botão de solicitar
+
+                    } catch (error) {
+                        console.error('❌ [ERRO] Erro ao processar actionButton da Avaliação Externa:', error);
+                        return '';
+                    }
                 }
             },
             'Proposta disponivel para apresentação': {
-                description: 'Realizar apresentação da proposta ao cliente.',
+                description: function(ticketData) {
+                    // Verificar valor médio das amostras
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+
+                    if (valorMedioAmostrasNumero >= 2000000) {
+                        return 'Imóveis acima de R$ 2.000.000 requerem avaliação externa antes da apresentação da proposta.';
+                    }
+
+                    return 'Agendar 2ª reunião para apresentação da proposta ao cliente.';
+                },
+                actionButton: function(ticketData) {
+                    // Verificar valor médio das amostras
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+
+                    console.log('🔍 [Proposta Disponível] Valor médio:', valorMedioAmostrasNumero);
+
+                    // CENÁRIO A: valor >= R$ 2.000.000 - Mostrar botão de Solicitar Avaliação Externa
+                    if (valorMedioAmostrasNumero >= 2000000) {
+                        // Verificar se avaliação já foi solicitada
+                        let avaliacaoSolicitada = false;
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' || ticketData.solicitar_avaliacao_externa[0] === true;
+                            } else if (typeof ticketData.solicitar_avaliacao_externa === 'string' || typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' || ticketData.solicitar_avaliacao_externa === true;
+                            }
+                        }
+
+                        // Verificar se avaliação já foi realizada
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo && typeof ticketData.upload_do_laudo === 'string' && ticketData.upload_do_laudo.trim() !== '';
+
+                        if (!avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                            return `
+                                <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Solicitar Avaliação Externa
+                                </button>
+                            `;
+                        }
+
+                        // Se já foi solicitada, não mostrar botão
+                        return '';
+                    }
+
+                    // CENÁRIO B: valor < R$ 2.000.000 - Mostrar botão de Agendar 2ª Visita
+                    return `
+                        <button onclick="window.negocioDetalheModule.openMarcar2aReuniaoModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clip-rule="evenodd" />
+                            </svg>
+                            Agendar 2ª Visita
+                        </button>
+                    `;
+                }
+            },
+            '2ª Reunião marcada': {
+                description: 'Realizar apresentação da proposta ao cliente na 2ª reunião.',
                 actionButton: `
                     <button onclick="window.negocioDetalheModule.openApresentacaoRealizadaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -815,12 +996,66 @@
                     `;
                 }
             },
+            'Standby': {
+                description: function(ticketData) {
+                    // Buscar informações do meeting de Standby se disponível
+                    var ticketId = ticketData ? ticketData.hs_object_id : null;
+                    var contactId = window.hubspotUserData ? window.hubspotUserData.contactId : null;
+
+                    if (ticketId && contactId && !window.standbyMeetingData) {
+                        // Buscar meeting de standby de forma assíncrona
+                        window.negocioDetalheModule.fetchStandbyMeetings(ticketId, contactId)
+                            .then(function(data) {
+                                if (data) {
+                                    window.standbyMeetingData = data;
+                                    // Atualizar a UI com os dados do meeting
+                                    window.negocioDetalheModule.updateStandbyInfo(data);
+                                }
+                            });
+                    }
+
+                    return 'Negociação pausada aguardando novo contato do cliente.';
+                },
+                actionButton: function(ticketData) {
+                    var baseButton = `
+                        <button onclick="window.negocioDetalheModule.retomarNegociacao()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                            </svg>
+                            Retomar Negociação
+                        </button>
+                    `;
+
+                    // Container para informações do standby que será preenchido dinamicamente
+                    return `
+                        <div id="standby-info-container" class="space-y-3">
+                            <div id="standby-info-display" class="hidden">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                            ${baseButton}
+                        </div>
+                    `;
+                }
+            },
             'Descartado': {
                 description: function(ticketData) {
+                    var self = window.negocioDetalheModule;
+                    const motivoCodigo = ticketData?.motivo_do_descarte;
                     const motivoDetalhado = ticketData?.detalhe_o_motivo_do_descarte;
-                    const motivoBase = ticketData?.motivo_do_descarte;
-                    const motivo = motivoDetalhado || motivoBase;
-                    return motivo || 'Motivo não informado.';
+
+                    // Obter label do motivo selecionado
+                    const motivoLabel = self.getMotivoDescarteLabel(motivoCodigo);
+
+                    // Formatar: Motivo + Descrição
+                    var descricao = '';
+                    if (motivoLabel) {
+                        descricao = '<strong>Motivo:</strong> ' + motivoLabel;
+                    }
+                    if (motivoDetalhado) {
+                        descricao += motivoLabel ? '<br><br><strong>Detalhes:</strong> ' + motivoDetalhado : motivoDetalhado;
+                    }
+
+                    return descricao || 'Motivo não informado.';
                 },
                 actionButton: `
                     <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte para reabrir uma negociação descartada', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
@@ -833,10 +1068,23 @@
             },
             'Perdido': {
                 description: function(ticketData) {
+                    var self = window.negocioDetalheModule;
+                    const motivoCodigo = ticketData?.motivo_da_perda;
                     const motivoDetalhado = ticketData?.detalhe_o_motivo_da_perda;
-                    const motivoBase = ticketData?.motivo_da_perda;
-                    const motivo = motivoDetalhado || motivoBase;
-                    return motivo || 'Motivo não informado.';
+
+                    // Obter label do motivo selecionado
+                    const motivoLabel = self.getMotivoPercaLabel(motivoCodigo);
+
+                    // Formatar: Motivo + Descrição
+                    var descricao = '';
+                    if (motivoLabel) {
+                        descricao = '<strong>Motivo:</strong> ' + motivoLabel;
+                    }
+                    if (motivoDetalhado) {
+                        descricao += motivoLabel ? '<br><br><strong>Detalhes:</strong> ' + motivoDetalhado : motivoDetalhado;
+                    }
+
+                    return descricao || 'Motivo não informado.';
                 },
                 actionButton: `
                     <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte para reabrir uma negociação perdida', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
@@ -937,9 +1185,25 @@
 
     generateDetailsCard: function(negocio, ticket) {
         const priorityInfo = this.getTicketPriorityInfo(ticket ? ticket.hs_ticket_priority : null);
-        console.log('negocio.qual_o_seu_principal_objetivo_', negocio.qual_o_seu_principal_objetivo_)
+        const currentPriority = ticket ? ticket.hs_ticket_priority : null;
         const objetivoLabel = this.getObjetivoLabel(negocio ? negocio.qual_o_seu_principal_objetivo_ : null);
-        
+        const currentObjetivo = negocio ? negocio.qual_o_seu_principal_objetivo_ : null;
+
+        console.log('📝 [generateDetailsCard] Prioridade atual:', currentPriority);
+        console.log('📝 [generateDetailsCard] Objetivo atual:', currentObjetivo);
+
+        // Gerar options para prioridade
+        const priorityOptions = this.getEnumerationOptions().hs_ticket_priority.map(function(opt) {
+            const isSelected = currentPriority === opt.value;
+            return '<option value="' + opt.value + '"' + (isSelected ? ' selected' : '') + '>' + opt.label + '</option>';
+        }).join('');
+
+        // Gerar options para objetivo
+        const objetivoOptions = this.getPrincipaisObjetivos().map(function(opt) {
+            const isSelected = currentObjetivo === opt.value;
+            return '<option value="' + opt.value + '"' + (isSelected ? ' selected' : '') + '>' + opt.label + '</option>';
+        }).join('');
+
         return `
             <div class="card p-6" id="bloco-detalhes">
                 <div class="flex justify-between items-center mb-4">
@@ -954,10 +1218,22 @@
                     <div><p class="text-sm font-medium text-slate-500">Principal objetivo</p><p class="text-base text-slate-700 mt-1" data-field="qual_o_seu_principal_objetivo_">${objetivoLabel}</p></div>
                 </div>
                 <div class="edit-mode hidden space-y-4">
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">Prioridade</label><select class="form-select" data-field="hs_ticket_priority">${this.getEnumerationOptions().hs_ticket_priority.map(opt => `<option value="${opt.value}" ${ticket && ticket.hs_ticket_priority === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}</select></div>
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">História do cliente</label><textarea class="form-input" rows="4" data-field="historia_do_cliente">${negocio.historia_do_cliente || ''}</textarea></div>
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">Principal objetivo</label><select class="form-select" data-field="qual_o_seu_principal_objetivo_">${this.getPrincipaisObjetivos().map(opt => `<option value="${opt.value}" ${negocio && negocio.qual_o_seu_principal_objetivo_ === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}</select></div>
-                    <div class="flex justify-end gap-3 pt-2"><button onclick="window.negocioDetalheModule.cancelEdit('detalhes')" class="btn btn-secondary">Cancelar</button><button onclick="window.negocioDetalheModule.saveEdit('detalhes')" class="btn btn-primary">Salvar</button></div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Prioridade</label>
+                        <select class="form-select" data-field="hs_ticket_priority">${priorityOptions}</select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">História do cliente</label>
+                        <textarea class="form-input" rows="4" data-field="historia_do_cliente">${negocio.historia_do_cliente || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Principal objetivo</label>
+                        <select class="form-select" data-field="qual_o_seu_principal_objetivo_">${objetivoOptions}</select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button onclick="window.negocioDetalheModule.cancelEdit('detalhes')" class="btn btn-secondary">Cancelar</button>
+                        <button onclick="window.negocioDetalheModule.saveEdit('detalhes')" class="btn btn-primary">Salvar</button>
+                    </div>
                 </div>
             </div>`;
     },
@@ -1110,11 +1386,72 @@
       const valorLocacao12Raw = ticket?.valor_aprovado_para_locacao___12_meses || 0;
       const isCompraZero = !valorCompra12Raw || valorCompra12Raw === 0 || resumoAprovacao.valorCompra12 === 'N/A';
       const isLocacaoZero = !valorLocacao12Raw || valorLocacao12Raw === 0 || resumoAprovacao.valorLocacao12 === 'N/A';
-      console.log('generateValuesApprovalCard:', ticket)
+
+      // Verificar se o ticket está na etapa "Proposta disponivel para apresentação" ou posterior
+      const currentStageId = ticket?.hs_pipeline_stage;
+      const propostaDisponivelId = '1062003577';
+
+      // Lista ordenada das etapas do funil
+      const stageOrder = [
+        '1095534672',
+        '1095534673',
+        '1095534674',
+        '1043275525',
+        '1043275526',
+        '1095528865',
+        '1043275527',
+        '1186972699',
+        '1062003577',
+        '1062003578',
+        '1095528866',
+        '1095528867',
+        '1095528868',
+        '1095528869',
+        '1095528870',
+        '1095528871',
+        '1206453052',
+        '1095528872',
+        '1095528873',
+      ];
+
+      // { id: '1095534672', label: 'Lead inicial' },
+      // { id: '1095534673', label: 'Visita marcada' },
+      // { id: '1095534674', label: 'Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
+      // { id: '1043275525', label: 'Documentação enviada' },
+      // { id: '1043275526', label: 'Aguardando documentos complementares' },
+      // { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] },
+      // { id: '1043275527', label: 'Pré Análise e Due Diligence' },
+      // { id: '1186972699' , label: 'Avaliação externa', combinedIds: ['1186972699', '979376900'] }, //new stage
+      // { id: '1062003577', label: 'Proposta disponivel para apresentação' },
+      // { id: '1062003578', label: 'Pedido de Contraproposta do cliente' },
+      // { id: '1095528866', label: 'Reajuste da proposta do (comitê investidor)' },
+      // { id: '1095528867', label: 'Documentação para formalização' },
+      // { id: '1095528868', label: 'Formalização Jurídica' },
+      // { id: '1095528869', label: 'Condicionais e Registro do imóvel' },
+      // { id: '1095528870', label: 'Finalização do pagamento' },
+      // { id: '1095528871', label: 'Em locação' },
+      // { id: '1206453052', label: 'Standby' }, // Etapa condicional - só aparece se já passou por ela
+      // { id: '1095528872', label: 'Descartado' },
+      // { id: '1095528873', label: 'Perdido' }
+
+      // Encontrar índice da etapa atual e da etapa de proposta disponível
+      const currentIndex = stageOrder.indexOf(currentStageId);
+      const propostaIndex = stageOrder.indexOf(propostaDisponivelId);
+
+      // Se a etapa atual está antes da "Proposta disponivel para apresentação", bloquear visualização
+      const shouldBlurValues = currentIndex !== -1 && currentIndex < propostaIndex;
+
+      // Classes CSS condicionais
+      const blurClass = shouldBlurValues ? 'style="filter: blur(4px); pointer-events: none; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : '';
+      const buttonDisabledClass = shouldBlurValues ? 'disabled' : '';
+      const buttonStyleClass = shouldBlurValues
+        ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        : (resumoAprovacao.linkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed');
+
       return `
           <div class="card p-6">
               <h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação pós comitê interno</h2>
-              <div class="space-y-3 mb-6">
+              <div class="space-y-3 mb-6" ${blurClass}>
                   <div class="flex justify-between items-center py-2 border-b border-slate-100">
                       <p class="text-sm font-medium text-slate-600">Valor Avaliado</p>
                       <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorAvaliado}</p>
@@ -1128,7 +1465,7 @@
                       <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLiquidez}</p>
                   </div>
               </div>
-              
+
               <!-- Apresentação da Proposta -->
               <div class="mb-6">
                   <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
@@ -1138,12 +1475,12 @@
                               <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                           </div>
                           <button
-                             ${resumoAprovacao.linkApresentacao ? `onclick="window.open('${resumoAprovacao.linkApresentacao}', '_blank')"` : 'disabled'}
-                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${resumoAprovacao.linkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed'} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                             ${shouldBlurValues || !resumoAprovacao.linkApresentacao ? 'disabled' : `onclick="window.open('${resumoAprovacao.linkApresentacao}', '_blank')"`}
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${buttonStyleClass} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
                               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                               </svg>
-                              ${resumoAprovacao.linkApresentacao ? 'Abrir Apresentação' : 'Ainda não disponível'}
+                              ${shouldBlurValues ? 'Ainda não disponível' : (resumoAprovacao.linkApresentacao ? 'Abrir Apresentação' : 'Ainda não disponível')}
                           </button>
                       </div>
                   </div>
@@ -1177,12 +1514,12 @@
 
               <!-- Valores Aprovados -->
               <div class="grid grid-cols-1 gap-4 mb-6">
-                  <div class="bg-green-50 p-4 rounded-lg border border-green-200 ${isCompraZero ? 'relative' : ''}">
+                  <div class="bg-green-50 p-4 rounded-lg border border-green-200 ${isCompraZero ? 'relative' : ''}" ${isCompraZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
                       ${isCompraZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
                       <p class="text-sm font-medium text-green-800">Valor Aprovado (Compra 12m)</p>
                       <p class="text-2xl font-bold text-green-700 mt-1">${resumoAprovacao.valorCompra12}</p>
                   </div>
-                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 ${isLocacaoZero ? 'relative' : ''}">
+                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 ${isLocacaoZero ? 'relative' : ''}" ${isLocacaoZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
                       ${isLocacaoZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
                       <p class="text-sm font-medium text-blue-800">Valor Aprovado (Locação 12m)</p>
                       <p class="text-2xl font-bold text-blue-700 mt-1">${resumoAprovacao.valorLocacao12}</p>
@@ -1262,7 +1599,7 @@
                       </thead>
                       <tbody class="bg-white divide-y divide-slate-200">
                           ${rowRevolutiHTML}
-                          <!-- rowAvaliacaoExtHTML -->
+                          ${rowAvaliacaoExtHTML}
                       </tbody>
                   </table>
               </div>
@@ -1703,13 +2040,20 @@
     },
 
     // Função para obter a data de conclusão de uma etapa específica
-    getStepCompletionDate: function(stepId, ticketData) {
+    getStepCompletionDate: function(stepId, ticketData, currentStageId) {
       // console.log('getStepCompletionDate', stepId, ticketData);
       if (!ticketData || !stepId) return null;
-      const fieldName = this.getDateEnteredFieldName(stepId);
+
+      // Se currentStageId for fornecido e for diferente do stepId,
+      // significa que estamos em um combinedId e devemos buscar a data dele
+      const dateFieldId = currentStageId && currentStageId !== stepId ? currentStageId : stepId;
+
+      const fieldName = this.getDateEnteredFieldName(dateFieldId);
       const timestamp = ticketData[fieldName];
-      // console.log('fieldName', fieldName)
-      // console.log('timestamp', timestamp)
+
+      // 🔍 DEBUG: Ver o que está retornando
+      console.log(`[getStepCompletionDate] stepId=${stepId}, fieldName=${fieldName}, timestamp=${timestamp}, tipo=${typeof timestamp}`);
+
       // return this.formatHubSpotDate(timestamp);
       return timestamp;
     },
@@ -1724,9 +2068,11 @@
         '1043275526': { label: 'Aguardando documentos complementares', color: 'bg-yellow-100 text-yellow-800' },
         '1043275527': { label: 'Pré Análise e Due Diligence', color: 'bg-purple-100 text-purple-800' },
         '1062003577': { label: 'Proposta disponivel para apresentação', color: 'bg-indigo-100 text-indigo-800' },
+        '1207696559': { label: 'Proposta disponivel para apresentação - Agendar 2ª visita', color: 'bg-indigo-100 text-indigo-800' },
+        '1207696560': { label: 'Proposta disponivel para apresentação - 2ª visita realizada', color: 'bg-indigo-100 text-indigo-800' },
         '1062003578': { label: 'Pedido de Contraproposta do cliente', color: 'bg-orange-100 text-orange-800' },
         '1095528865': { label: 'Avaliação do imóvel (comitê interno)', color: 'bg-purple-100 text-purple-800' },
-        '979376900': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
+        '1204075783': { label: 'Comitê interno', color: 'bg-teal-100 text-teal-800' }, 
         '1186972699': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
         '1095528866': { label: 'Reajuste da proposta do (comitê investidor)', color: 'bg-orange-100 text-orange-800' },
         '1095528867': { label: 'Documentação para formalização', color: 'bg-yellow-100 text-yellow-800' },
@@ -1734,23 +2080,29 @@
         '1095528869': { label: 'Condicionais e Registro do imóveis', color: 'bg-purple-100 text-purple-800' },
         '1095528870': { label: 'Finalização do pagamento', color: 'bg-green-100 text-green-800' },
         '1095528871': { label: 'Em locação', color: 'bg-green-100 text-green-800' },
+        '1206453052': { label: 'Standby', color: 'bg-amber-100 text-amber-800' },
         '1095528872': { label: 'Descartado', color: 'bg-gray-100 text-gray-800' },
         '1095528873': { label: 'Perdido', color: 'bg-red-100 text-red-800' }
       };
       return statusMap[hs_pipeline_stage] || { label: 'Status não identificado', colorClass: 'badge-gray' };
     },
 
+    // TODO: Função para obter os passos do funil de negócios (pipeline de Franquias)
     getFunnelSteps: function() {
       return [
         { id: '1095534672', label: 'Lead inicial' },
-        { id: '1095534673', label: 'Visita marcada' },
-        { id: '1095534674', label: 'Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
+        { id: '1095534673', label: '1ª Visita marcada' },
+        { id: '1095534674', label: '1ª Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
         { id: '1043275525', label: 'Documentação enviada' },
         { id: '1043275526', label: 'Aguardando documentos complementares' },
-        { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)' },
         { id: '1043275527', label: 'Pré Análise e Due Diligence' },
-        { id: '979376900', label: 'Avaliação externa', combinedIds: ['979376900', '1186972699'] },
-        { id: '1062003577', label: 'Proposta disponivel para apresentação' },
+        { id: '1186972699', label: 'Avaliação externa', combinedIds: ['1186972699', '979376900'] }, //new stage
+        { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] }, // agrupa etapas de Em analise do backoffice e avaliação do imovel. (pipeline de Franquias)
+        { id: '1062003577', label: 'Proposta disponivel para apresentação' }, // Sem combinedIds - 1207696559 é etapa independente
+
+        { id: '1207696559', label: '2ª Reunião marcada' },
+        // { id: '1207696560', label: '2ª Reunião realizada' }, // Não usada - agrupada em outras etapas
+
         { id: '1062003578', label: 'Pedido de Contraproposta do cliente' },
         { id: '1095528866', label: 'Reajuste da proposta do (comitê investidor)' },
         { id: '1095528867', label: 'Documentação para formalização' },
@@ -1758,6 +2110,7 @@
         { id: '1095528869', label: 'Condicionais e Registro do imóvel' },
         { id: '1095528870', label: 'Finalização do pagamento' },
         { id: '1095528871', label: 'Em locação' },
+        { id: '1206453052', label: 'Standby' }, // Etapa condicional - só aparece se já passou por ela
         { id: '1095528872', label: 'Descartado' },
         { id: '1095528873', label: 'Perdido' }
       ];
@@ -1767,115 +2120,75 @@
       var allSteps = this.getFunnelSteps();
 
       // Verificar se a etapa atual é "Descartado" ou "Perdido"
-      var isDescartadoOrPerdido = currentStageId === '1095528872' || currentStageId === '1095528871';
+      var isDescartadoOrPerdido = currentStageId === '1095528872' || currentStageId === '1095528873';
 
       if (isDescartadoOrPerdido) {
         // Se for Descartado ou Perdido, mostrar apenas essas duas etapas
         var steps = [
           { id: '1095528872', label: 'Descartado' },
-          { id: '1095528871', label: 'Perdido' }
+          { id: '1095528873', label: 'Perdido' }
         ];
         var currentIndex = steps.findIndex(step => step.id === currentStageId);
         return { steps, currentIndex };
       } else {
-        // Caso contrário, mostrar o funil normal (excluindo Descartado e Perdido)
-        var steps = allSteps.filter(step => step.id !== '1095528872' && step.id !== '1095528871');
+        // Verificar se deve mostrar etapa Standby
+        var isStandby = currentStageId === '1206453052';
+        var hasPassedStandby = ticketPortal && ticketPortal.hs_v2_date_entered_1206453052;
 
-        // 🔄 LÓGICA DE REORDENAÇÃO DINÂMICA - 2 Cenários de Avaliação Externa
-        if (ticketPortal) {
-          // Obter campos necessários
-          const uploadDoLaudo = ticketPortal.upload_do_laudo;
-          const linkDaProposta = ticketPortal.link_da_proposta;
-          const isPropostaDisponivel = currentStageId === '1062003577';
+        // Caso contrário, mostrar o funil normal (excluindo Descartado, Perdido e condicionalmente Standby)
+        var steps = allSteps.filter(function(step) {
+          // Sempre excluir Descartado e Perdido
+          if (step.id === '1095528872' || step.id === '1095528873') return false;
 
-          console.log('🔄 [REORDENAÇÃO] Dados do ticket:', {
-            uploadDoLaudo: uploadDoLaudo,
-            linkDaProposta: linkDaProposta,
-            currentStageId: currentStageId,
-            isPropostaDisponivel: isPropostaDisponivel
-          });
-
-          // CENÁRIO 1: Avaliação Externa ANTES da elaboração da primeira proposta
-          // Condições: Tem laudo + Está em "Proposta disponível" + Não tem link da proposta ainda
-          const isAvaliacaoAntesDaProposta =
-            uploadDoLaudo &&
-            uploadDoLaudo.trim() !== '' &&
-            isPropostaDisponivel &&
-            (!linkDaProposta || linkDaProposta.trim() === '');
-
-          // CENÁRIO 2: Avaliação Externa DEPOIS da elaboração da primeira proposta
-          // Condições: Tem laudo + Tem link da proposta
-          const isAvaliacaoDepoisDaProposta =
-            uploadDoLaudo &&
-            uploadDoLaudo.trim() !== '' &&
-            linkDaProposta &&
-            linkDaProposta.trim() !== '';
-
-          console.log('🔄 [REORDENAÇÃO] Cenários detectados:', {
-            cenario1_AvaliacaoAntes: isAvaliacaoAntesDaProposta,
-            cenario2_AvaliacaoDepois: isAvaliacaoDepoisDaProposta
-          });
-
-          // Encontrar índices das etapas
-          const indexComiteInterno = steps.findIndex(step => step.id === '1095528865');
-          const indexPreAnalise = steps.findIndex(step => step.id === '1043275527');
-          const indexAvaliacaoExterna = steps.findIndex(step =>
-            step.id === '979376900' || (step.combinedIds && step.combinedIds.includes('979376900'))
-          );
-
-          console.log('🔄 [REORDENAÇÃO] Índices das etapas:', {
-            comiteInterno: indexComiteInterno,
-            preAnalise: indexPreAnalise,
-            avaliacaoExterna: indexAvaliacaoExterna
-          });
-
-          if (isAvaliacaoAntesDaProposta) {
-            // CENÁRIO 1: Mover Avaliação Externa para ANTES do Comitê Interno
-            // Ordem: Avaliação Externa → Comitê Interno → Pré-análise
-            console.log('🔄 [CENÁRIO 1] Avaliação Externa ANTES da proposta - Reordenando...');
-
-            if (indexAvaliacaoExterna !== -1 && indexComiteInterno !== -1 && indexAvaliacaoExterna > indexComiteInterno) {
-              const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
-              steps.splice(indexComiteInterno, 0, avaliacaoExternaStep);
-              console.log('✅ [CENÁRIO 1] Avaliação Externa movida ANTES do Comitê Interno');
-              console.log('   Ordem: Avaliação Externa → Comitê Interno → Pré-análise');
-            }
-
-          } else if (isAvaliacaoDepoisDaProposta) {
-            // CENÁRIO 2: Mover Avaliação Externa para DEPOIS do Comitê Interno mas ANTES da Pré-análise
-            // Ordem: Comitê Interno → Avaliação Externa → Pré-análise
-            console.log('🔄 [CENÁRIO 2] Avaliação Externa DEPOIS da proposta - Reordenando...');
-
-            if (indexAvaliacaoExterna !== -1 && indexPreAnalise !== -1 && indexAvaliacaoExterna > indexPreAnalise) {
-              const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
-
-              // Inserir logo após o Comitê Interno (antes da Pré-análise)
-              const newIndex = indexComiteInterno !== -1 ? indexComiteInterno + 1 : indexPreAnalise;
-              steps.splice(newIndex, 0, avaliacaoExternaStep);
-
-              console.log('✅ [CENÁRIO 2] Avaliação Externa movida DEPOIS do Comitê Interno');
-              console.log('   Ordem: Comitê Interno → Avaliação Externa → Pré-análise');
-            }
-
-          } else {
-            // Nenhum cenário se aplica - manter ordem padrão
-            console.log('🔄 [ORDEM PADRÃO] Sem reordenação - mantendo ordem original');
-            console.log('   Ordem: Comitê Interno → Pré-análise → Avaliação Externa');
+          // Incluir Standby apenas se estiver nessa etapa OU já tiver passado por ela
+          if (step.id === '1206453052') {
+            return isStandby || hasPassedStandby;
           }
 
-          // 🎯 AJUSTE DO CURRENTINDEX PARA CENÁRIO 1
-          // Se está no Cenário 1 (avaliação antes da proposta), forçar etapa ativa para "Avaliação do imóvel (comitê interno)"
-          // mesmo que o ticket esteja em "Proposta disponível para apresentação"
-          if (isAvaliacaoAntesDaProposta) {
-            console.log('🎯 [CENÁRIO 1] Ajustando etapa ativa para "Avaliação do imóvel (comitê interno)"');
-            console.log('   Motivo: Link da proposta ainda não disponível');
+          return true;
+        });
 
-            // Encontrar o índice da etapa "Avaliação do imóvel (comitê interno)" no array reordenado
-            const indexComiteInternoReordenado = steps.findIndex(step => step.id === '1095528865');
+        // 🔄 NOVA LÓGICA DE REORDENAÇÃO DINÂMICA - Baseada em valor_medio_amostras
+        if (ticketPortal) {
+          // Obter valor médio das amostras do ticket associado
+          const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
 
-            if (indexComiteInternoReordenado !== -1) {
-              console.log('   Etapa ativa forçada:', steps[indexComiteInternoReordenado].label);
-              return { steps, currentIndex: indexComiteInternoReordenado };
+          if (ticket && ticket.valor_medio_amostras) {
+            const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+            const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+
+            console.log('🔄 [REORDENAÇÃO] Valor médio das amostras:', valorMedioAmostrasNumero);
+
+            // Se valor < R$ 2.000.000, mover Avaliação Externa para DEPOIS da 2ª Reunião Marcada
+            if (valorMedioAmostrasNumero < 2000000) {
+              console.log('🔄 [CENÁRIO < 2M] Movendo Avaliação Externa para DEPOIS da 2ª Reunião Marcada');
+
+              // Encontrar índices
+              const indexAvaliacaoExterna = steps.findIndex(step =>
+                step.id === '1186972699' || step.id === '979376900' ||
+                (step.combinedIds && (step.combinedIds.includes('1186972699') || step.combinedIds.includes('979376900')))
+              );
+              const index2aReuniaoMarcada = steps.findIndex(step =>
+                step.id === '1207696559'
+              );
+
+              console.log('🔄 [REORDENAÇÃO] Índices:', {
+                avaliacaoExterna: indexAvaliacaoExterna,
+                reuniao2Marcada: index2aReuniaoMarcada
+              });
+
+              // Mover apenas se Avaliação Externa estiver ANTES da 2ª Reunião Marcada
+              if (indexAvaliacaoExterna !== -1 && index2aReuniaoMarcada !== -1 && indexAvaliacaoExterna < index2aReuniaoMarcada) {
+                const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
+                steps.splice(index2aReuniaoMarcada, 0, avaliacaoExternaStep); // Inserir logo após 2ª Reunião Marcada
+
+                console.log('✅ [CENÁRIO < 2M] Avaliação Externa movida para DEPOIS da 2ª Reunião Marcada');
+                console.log('   Ordem: Pré-análise → Comitê Interno → Proposta Disponível → 2ª Reunião Marcada → Avaliação Externa');
+              }
+            } else {
+              // Se valor >= R$ 2.000.000, manter ordem DEFAULT (já definida em getFunnelSteps)
+              console.log('🔄 [CENÁRIO >= 2M] Mantendo ordem DEFAULT do funil');
+              console.log('   Ordem: Pré-análise → Avaliação Externa → Comitê Interno → Proposta Disponível');
             }
           }
         }
@@ -1932,10 +2245,23 @@
 
     getObjetivoLabel: function(value) {
       var formatedValue = Array.isArray(value) ? value[0] : value;
-      var objetivo = this.getPrincipaisObjetivos().find(obj => obj.label === formatedValue);
-      console.log('objetivo', objetivo)
-      console.log('formatedValue', formatedValue)
+      // Buscar por value (ex: "tenho_outros_objetivos_financeiros"), não por label
+      console.log('getObjetivoLabel: ', formatedValue)
+      var objetivo = this.getPrincipaisObjetivos().find(obj => obj.value === formatedValue);
+      
       return objetivo ? objetivo.label : 'Não informado';
+    },
+
+    getMotivoDescarteLabel: function(value) {
+      if (!value) return null;
+      var formatedValue = Array.isArray(value) ? value[0] : value;
+      return this.motivosDescarte[formatedValue] || formatedValue;
+    },
+
+    getMotivoPercaLabel: function(value) {
+      if (!value) return null;
+      var formatedValue = Array.isArray(value) ? value[0] : value;
+      return this.motivosPerda[formatedValue] || formatedValue;
     },
 
     getEnumerationOptions: function() {
@@ -2493,11 +2819,11 @@
         .then(function() {
           viewMode.style.display = 'block';
           editMode.style.display = 'none';
-          this.showToast('Todos os campos foram atualizados com sucesso!', 'success');
+          // this.showToast('Todos os campos foram atualizados com sucesso!', 'success');
         })
         .catch(function(error) {
           console.error('Erro ao salvar campos:', error);
-          this.showToast('Erro ao salvar alguns campos. Verifique o console para detalhes.', 'error');
+          // this.showToast('Erro ao salvar alguns campos. Verifique o console para detalhes.', 'error');
         })
         .finally(function() {
           if (saveButton) {
@@ -2648,14 +2974,15 @@
     updateViewMode: function(blockId, fieldName, newValue) {
       var block = document.getElementById('bloco-' + blockId);
       if (!block) return;
-      
+
       var viewElement = block.querySelector('.view-mode [data-field="' + fieldName + '"]');
       if (!viewElement) return;
-      
+
       if (fieldName === 'hs_ticket_priority') {
         var priorityInfo = this.getTicketPriorityInfo(newValue);
-        viewElement.innerHTML = '<span>' + priorityInfo.icon + '</span>' + priorityInfo.label;
-        viewElement.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ' + priorityInfo.color;
+        // Usar classes badge corretas ao invés de inline-flex
+        viewElement.innerHTML = priorityInfo.icon + ' ' + priorityInfo.label;
+        viewElement.className = 'badge ' + priorityInfo.colorClass + ' mt-1';
       } else if (fieldName === 'qual_o_seu_principal_objetivo_') {
         viewElement.textContent = this.getObjetivoLabel(newValue);
       } else {
@@ -3613,6 +3940,29 @@
         });
     },
 
+    // Função para buscar meeting de Standby
+    fetchStandbyMeetings: function(ticketId, contactId) {
+      var url = `https://n8n2.rooftop.com.br/webhook/portal/meetings/standby?ticket_id=${ticketId}&contact_id=${contactId}`;
+
+      console.log('🔍 Buscando meeting de Standby para ticket:', ticketId, 'e contato:', contactId);
+
+      return fetch(url)
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('Erro ao buscar meeting de Standby');
+          }
+          return response.json();
+        })
+        .then(function(data) {
+          console.log('✅ Meeting de Standby carregado:', data);
+          return data;
+        })
+        .catch(function(error) {
+          console.error('❌ Erro ao buscar meeting de Standby:', error);
+          return null;
+        });
+    },
+
     // Função para buscar histórico de propostas
     fetchPropostaHistory: function(ticketId) {
       if (!ticketId) {
@@ -3650,12 +4000,12 @@
     updateVisitInfo: function(data) {
       var container = document.getElementById('visit-info-display');
       if (!container || !data) return;
-      
+
       // Armazenar o meeting_id globalmente para uso posterior
       if (data.id) {
         window.currentMeetingId = data.id;
       }
-      
+
       // Formatar data e hora da reunião
       var meetingTime = data.properties.hs_meeting_start_time ? new Date(data.properties.hs_meeting_start_time).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -3664,7 +4014,7 @@
         hour: '2-digit',
         minute: '2-digit'
       }) : 'Não definido';
-      
+
       // Formatar data de criação
       var createDate = data.properties.hs_createdate ? new Date(data.properties.hs_createdate).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -3673,7 +4023,7 @@
         hour: '2-digit',
         minute: '2-digit'
       }) : '';
-      
+
       var html = `
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
           <p class="font-semibold text-blue-900 mb-2">Informações da Visita Agendada:</p>
@@ -3684,15 +4034,53 @@
           </div>
         </div>
       `;
-      
+
       container.innerHTML = html;
       container.classList.remove('hidden');
-      
+
       // Atualizar o botão para incluir o meeting_id
       var button = document.querySelector('[onclick="window.negocioDetalheModule.openReuniaoRealizadaModal()"]');
       if (button && data.id) {
         button.setAttribute('onclick', `window.negocioDetalheModule.openReuniaoRealizadaModal('${data.id}')`);
       }
+    },
+
+    // Função para atualizar a UI com informações do meeting de Standby
+    updateStandbyInfo: function(data) {
+      var container = document.getElementById('standby-info-display');
+      if (!container || !data) return;
+
+      // Formatar data e hora do meeting
+      var meetingTime = data.properties.hs_meeting_start_time ? new Date(data.properties.hs_meeting_start_time).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : 'Não definido';
+
+      // Formatar data de criação
+      var createDate = data.properties.hs_createdate ? new Date(data.properties.hs_createdate).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '';
+
+      var html = `
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm mb-3">
+          <p class="font-semibold text-amber-900 mb-2">Informações do Standby:</p>
+          <div class="space-y-1 text-amber-800">
+            <p><span class="font-medium">Data da Pausa:</span> ${meetingTime}</p>
+            ${data.properties.hs_meeting_body ? `<p><span class="font-medium">Motivo/Descrição:</span> ${data.properties.hs_meeting_body}</p>` : ''}
+            ${createDate ? `<p class="text-sm text-slate-500"><span class="">Registrado em:</span> ${createDate}</p>` : ''}
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove('hidden');
     },
     
     // =====================================================
@@ -4240,7 +4628,157 @@
         self.showToast('Erro ao agendar reunião. Tente novamente.', 'error');
       });
     },
-    
+
+    // =========================================================================
+    // FUNÇÕES PARA 2ª REUNIÃO (AGENDAR 2ª VISITA)
+    // =========================================================================
+
+    openMarcar2aReuniaoModal: function() {
+      var self = this;
+
+      var modalHTML = `
+        <div id="marcar-2a-reuniao-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto;">
+            <div style="padding: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Agendar 2ª Reunião</h3>
+                <button onclick="window.negocioDetalheModule.closeMarcar2aReuniaoModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
+                  <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <form id="marcar-2a-reuniao-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e Hora</label>
+                  <input type="datetime-local" id="reuniao2-start-time" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Observações</label>
+                  <textarea id="reuniao2-body" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Descreva o objetivo da 2ª reunião..." required></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                  <button type="button" onclick="window.negocioDetalheModule.closeMarcar2aReuniaoModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
+                    Cancelar
+                  </button>
+                  <button type="submit" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background: #2563EB; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Agendar 2ª Reunião
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Preencher data atual + 1 dia como padrão
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(14, 0, 0, 0); // 14:00 como horário padrão
+      var isoString = tomorrow.toISOString().slice(0, 16);
+      document.getElementById('reuniao2-start-time').value = isoString;
+
+      document.getElementById('marcar-2a-reuniao-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        self.confirmarAgendamento2aReuniaoInicial();
+      });
+
+      this.escMarcar2aReuniaoHandler = function(e) {
+        if (e.key === 'Escape') self.closeMarcar2aReuniaoModal();
+      };
+      document.addEventListener('keydown', this.escMarcar2aReuniaoHandler);
+    },
+
+    closeMarcar2aReuniaoModal: function() {
+      var modal = document.getElementById('marcar-2a-reuniao-modal');
+      if (modal) {
+        document.removeEventListener('keydown', this.escMarcar2aReuniaoHandler);
+        modal.remove();
+      }
+    },
+
+    confirmarAgendamento2aReuniaoInicial: function() {
+      var self = this;
+      var titulo = '2ª Visita marcada';
+      var startTime = document.getElementById('reuniao2-start-time').value;
+      var body = document.getElementById('reuniao2-body').value.trim();
+      var internalNotes = document.getElementById('reuniao2-body').value.trim();
+
+      if (!titulo || !startTime || !body) {
+        self.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+        return;
+      }
+
+      var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
+
+      if (!ticketId) {
+        this.showToast('ID do ticket do portal não encontrado.', 'error');
+        return;
+      }
+
+      // Converter datetime-local para formato ISO com timezone
+      var dateTime = new Date(startTime);
+      var isoStartTime = dateTime.toISOString();
+
+      // Preparar payload para API de meetings
+      var meetingPayload = {
+        type: 'marcar_2a_visita',
+        title: '2ª Visita - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente'),
+        start_time: dateTime.toISOString().replace('Z', '-03:00'), // Timezone Brasil
+        end_time: new Date(dateTime.getTime() + 60 * 60 * 1000).toISOString().replace('Z', '-03:00'), // +1 hora
+        contact_id: window.hubspotUserData?.contactId || null,
+        ticket_id: ticketId.toString(),
+        description: body
+      };
+
+      console.log('📅 Agendando 2ª meeting via API (type: marcar_2a_visita):', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ 2ª Meeting agendada com sucesso via API:', result);
+
+        // Salvar meeting_id para usar quando confirmar 2ª visita realizada
+        if (result && result.meeting_id) {
+          window.current2MeetingId = result.meeting_id;
+          console.log('📝 2ª Meeting ID salvo:', result.meeting_id);
+        }
+
+        self.showToast('2ª Reunião agendada com sucesso!', 'success');
+
+        // Após agendar, atualizar o step para "2ª Reunião marcada" (etapa 1207696559)
+        return window.negocioDetalheModule.updateStep('1207696559', '2ª Reunião marcada', {
+          tipo: 'agendamento_2a_reuniao',
+          titulo: '2ª Visita - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente'),
+          dataHora: meetingPayload.start_time,
+          meeting_id: result.meeting_id
+        });
+      })
+      .then(function() {
+        window.negocioDetalheModule.closeMarcar2aReuniaoModal();
+      })
+      .catch(function(error) {
+        console.error('Erro ao agendar 2ª reunião:', error);
+        self.showToast('Erro ao agendar 2ª reunião. Tente novamente.', 'error');
+      });
+    },
+
     confirmarEnvioDocumentacao: function() {
       console.log('Dc envada') 
       this.updateStep('1043275525', 'Documentação enviada', {
@@ -4309,40 +4847,64 @@
     
     openApresentacaoRealizadaModal: function() {
       var self = this;
-      
+
+      // Gerar opções do select de motivos de perda
+      var motivosOptions = Object.entries(this.motivosPerda)
+        .map(function(item) {
+          return '<option value="' + item[0] + '">' + item[1] + '</option>';
+        })
+        .join('');
+
       var modalHTML = `
         <div id="apresentacao-realizada-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto; max-height: 90vh;">
             <div style="padding: 1.5rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Proposta disponivel para apresentação</h3>
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Resultado da apresentação</h3>
                 <button onclick="window.negocioDetalheModule.closeApresentacaoRealizadaModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
                   <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
                 </button>
               </div>
-              
+
               <form id="apresentacao-realizada-form" style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
                   <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data da Apresentação</label>
                   <input type="date" id="apresentacao-data" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
                 </div>
-                
+
                 <div>
-                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Resultado da Apresentação</label>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Resultado da Apresentação <span style="color: #EF4444;">*</span>
+                  </label>
                   <textarea id="apresentacao-resultado" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Faltou algum valor para o aceite do cliente? Quais dividas ele precisa quitar e por isso precisa de mais capital?" required></textarea>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">Mínimo 10 caracteres - Descreva o resultado da apresentação</p>
                 </div>
-                
+
                 <div>
                   <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
                   <select id="apresentacao-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
                     <option value="">Selecione o próximo passo</option>
-                    <option value="renegociar">Cliente quer renegociar a proposta</option>
                     <option value="formalizar">Pode seguir para formalização</option>
+                    <option value="renegociar">Cliente quer renegociar a proposta</option>
+                    <option value="standby">Pausar negociação e esperar novo contato</option>
+                    <option value="perdido">Cliente NÃO quer seguir (perder o lead)</option>
                   </select>
                 </div>
-                
+
+                <!-- Campo de Motivo da Perda (inicialmente oculto) -->
+                <div id="motivo-perda-container" style="display: none;">
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Motivo da Perda <span style="color: #EF4444;">*</span>
+                  </label>
+                  <select id="apresentacao-motivo-perda" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;">
+                    <option value="">Selecione o motivo...</option>
+                    ${motivosOptions}
+                  </select>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">É obrigatório informar o motivo quando o cliente não quer seguir</p>
+                </div>
+
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
                   <button type="button" onclick="window.negocioDetalheModule.closeApresentacaoRealizadaModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
                     Cancelar
@@ -4356,19 +4918,34 @@
           </div>
         </div>
       `;
-      
+
       document.body.insertAdjacentHTML('beforeend', modalHTML);
-      
+
       // Preencher data atual como padrão
       var today = new Date();
       var todayString = today.toISOString().slice(0, 10);
       document.getElementById('apresentacao-data').value = todayString;
-      
+
+      // Event listener para mostrar/ocultar campo de motivo da perda
+      document.getElementById('apresentacao-proximo-passo').addEventListener('change', function() {
+        var motivoPerdaContainer = document.getElementById('motivo-perda-container');
+        var motivoPerdaSelect = document.getElementById('apresentacao-motivo-perda');
+
+        if (this.value === 'perdido') {
+          motivoPerdaContainer.style.display = 'block';
+          motivoPerdaSelect.setAttribute('required', 'required');
+        } else {
+          motivoPerdaContainer.style.display = 'none';
+          motivoPerdaSelect.removeAttribute('required');
+          motivoPerdaSelect.value = ''; // Limpar seleção
+        }
+      });
+
       document.getElementById('apresentacao-realizada-form').addEventListener('submit', function(e) {
         e.preventDefault();
         self.confirmarApresentacaoRealizada();
       });
-      
+
       this.escApresentacaoRealizadaHandler = function(e) {
         if (e.key === 'Escape') self.closeApresentacaoRealizadaModal();
       };
@@ -4384,43 +4961,161 @@
     },
     
     confirmarApresentacaoRealizada: function() {
+      var self = this;
       var data = document.getElementById('apresentacao-data').value.trim();
       var resultado = document.getElementById('apresentacao-resultado').value.trim();
       var proximoPasso = document.getElementById('apresentacao-proximo-passo').value.trim();
-      
-      if (!data || !resultado || !proximoPasso) {
-        self.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+      var motivoPerda = document.getElementById('apresentacao-motivo-perda').value.trim();
+
+      // Validar data
+      if (!data) {
+        self.showToast('Por favor, selecione a data da apresentação.', 'warning');
         return;
       }
-      
+
+      // Validar próximo passo
+      if (!proximoPasso) {
+        self.showToast('Por favor, selecione o próximo passo.', 'warning');
+        return;
+      }
+
+      // Validar resultado da apresentação (obrigatório para todas as opções)
+      if (!resultado) {
+        self.showToast('Por favor, preencha o campo "Resultado da Apresentação".', 'warning');
+        return;
+      }
+
+      // Validar tamanho mínimo do resultado (mínimo 10 caracteres)
+      if (resultado.length < 10) {
+        self.showToast('O campo "Resultado da Apresentação" deve ter no mínimo 10 caracteres. Atual: ' + resultado.length + '/10', 'warning');
+        return;
+      }
+
+      // Validar motivo da perda quando opção "perdido" é selecionada
+      if (proximoPasso === 'perdido' && !motivoPerda) {
+        self.showToast('Por favor, selecione o motivo da perda.', 'warning');
+        return;
+      }
+
       // Formatar data para DD/MM/AAAA
       var dateObj = new Date(data + 'T12:00:00'); // Adicionar horário para evitar problemas de timezone
       var formattedDate = dateObj.toLocaleDateString('pt-BR');
-      
+
       // Determinar próxima etapa baseado na seleção
       var proximaEtapa, proximoLabel;
-      
+
       if (proximoPasso === 'renegociar') {
         proximaEtapa = '1062003578';
         proximoLabel = 'Pedido de Contraproposta do cliente';
       } else if (proximoPasso === 'formalizar') {
         proximaEtapa = '1095528867';
         proximoLabel = 'Documentação para formalização';
+      } else if (proximoPasso === 'standby') {
+        proximaEtapa = '1206453052';
+        proximoLabel = 'Pausar negociação e esperar novo contato';
+      } else if (proximoPasso === 'perdido') {
+        proximaEtapa = '1095528873';
+        proximoLabel = 'Perdido';
       }
-      
-      // Criar meeting de apresentação realizada via nova API
-      this.createPresentationMeeting(data, resultado, proximoPasso);
-      
-      this.updateStep(proximaEtapa, proximoLabel, {
+
+      if(proximoPasso === 'standby' || proximoPasso === 'perdido') {
+        this.createPresentationMeetingStandy(data, resultado, proximoPasso, motivoPerda);
+      } else {
+        this.createPresentationMeeting(data, resultado, proximoPasso);
+      }
+
+      // Preparar dados para enviar ao updateStep
+      var updateData = {
         data: formattedDate,
         resultado: resultado,
         proximo_passo: proximoPasso,
         tipo: 'apresentacao_realizada'
-      });
-      
+      };
+
+      // Se for perdido, adicionar motivo da perda e seu label
+      if (proximoPasso === 'perdido' && motivoPerda) {
+        updateData.motivo_perda = motivoPerda;
+        updateData.motivo_perda_label = self.motivosPerda[motivoPerda] || motivoPerda;
+        updateData.ticket_motivo_da_perda = motivoPerda;
+        updateData.ticket_detalhe_o_motivo_da_perda = resultado;
+      }
+
+      this.updateStep(proximaEtapa, proximoLabel, updateData);
+
       this.closeApresentacaoRealizadaModal();
     },
     
+    // Nova função para criar meeting de apresentação realizada com resultado Standy e Perdido
+    createPresentationMeetingStandy: function(data, resultado, proximoPasso, motivoPerda) {
+      var self = this;
+      var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
+
+      if (!ticketId) {
+        console.error('❌ Ticket ID não disponível para criar meeting de apresentação');
+        return;
+      }
+
+      // Converter data para datetime no meio do dia (15:00 como padrão)
+      var dateTime = new Date(data + 'T15:00:00');
+
+      var description = '';
+      var meetingType = '';
+      var meetingTitle = '';
+
+      // Determinar tipo de meeting e descrição baseado no próximo passo
+      if (proximoPasso === 'perdido') {
+        meetingType = 'perdido_franquias';
+        meetingTitle = 'Lead Perdido - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente');
+        description = 'Lead perdido após apresentação da proposta. ';
+
+        // Adicionar motivo da perda
+        if (motivoPerda) {
+          var motivoLabel = self.motivosPerda[motivoPerda] || motivoPerda;
+          description += 'Motivo da perda: ' + motivoLabel + '. ';
+        }
+
+        description += 'Comentários: ' + resultado;
+      } else if (proximoPasso === 'Standby') {
+        meetingType = 'standby_franquias';
+        meetingTitle = 'Em Standby - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente');
+        description = 'Negócio em Standby - pausado para aguardar novo contato. ';
+        description += 'Comentários: ' + resultado;
+      }
+
+      var meetingPayload = {
+        type: meetingType,
+        title: meetingTitle,
+        start_time: dateTime.toISOString().replace('Z', '-03:00'), // Timezone Brasil
+        end_time: new Date(dateTime.getTime() + 60 * 60 * 1000).toISOString().replace('Z', '-03:00'), // +1 hora
+        status: 'COMPLETED', // Já fechado
+        contact_id: window.hubspotUserData?.contactId || null,
+        ticket_id: ticketId.toString(),
+        description: description
+      };
+
+      console.log('📋 Criando meeting via nova API:', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ Meeting criado com sucesso:', result);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao criar meeting:', error);
+      });
+    },
+
     // Nova função para criar meeting de apresentação realizada via nova API
     createPresentationMeeting: function(data, resultado, proximoPasso) {
       var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
@@ -4814,6 +5509,15 @@
       this.showConfirm('Deseja reabrir a Pedido de Contraproposta do cliente?', function() {
         self.updateStep('1062003577', 'Pedido de Contraproposta do cliente', {
           tipo: 'reabertura_negociacao'
+        });
+      });
+    },
+
+    retomarNegociacao: function() {
+      var self = this;
+      this.showConfirm('Deseja retomar a negociação e voltar para a etapa "Proposta disponível para apresentação"?', function() {
+        self.updateStep('1062003577', 'Proposta disponivel para apresentação', {
+          tipo: 'retomada_negociacao_standby'
         });
       });
     },
@@ -5808,6 +6512,213 @@
     // }).join('');
 
     // documentsContainer.innerHTML = documentsHTML;
+  },
+
+  /**
+   * Gerar HTML do badge de prioridade
+   * @param {string} priority - Prioridade do ticket (LOW, MEDIUM, HIGH, URGENT)
+   */
+  getPriorityBadgeHTML: function(priority) {
+    var priorityMap = {
+      'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
+      'MEDIUM': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },
+      'HIGH': { label: 'Alta', color: 'bg-orange-100 text-orange-800', value: 'HIGH' },
+      'URGENT': { label: 'Urgente', color: 'bg-red-100 text-red-800', value: 'URGENT' },
+      'BAIXA': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
+      'MÉDIA': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },
+      'ALTA': { label: 'Alta', color: 'bg-orange-100 text-orange-800', value: 'HIGH' },
+      'URGENTE': { label: 'Urgente', color: 'bg-red-100 text-red-800', value: 'URGENT' }
+    };
+
+    var priorityInfo = priorityMap[priority?.toUpperCase()] || { label: 'Não definida', color: 'bg-gray-100 text-gray-800', value: 'MEDIUM' };
+    return '<span class="px-2 py-1 text-sm rounded-full ' + priorityInfo.color + '">' + priorityInfo.label + '</span>';
+  },
+
+  /**
+   * Abrir edição inline de prioridade no header
+   * @param {HTMLElement} cell - Elemento clicado
+   * @param {Event} event - Evento de click
+   */
+  abrirEdicaoPrioridadeHeader: function(cell, event) {
+    var self = this;
+
+    // Prevenir propagação do evento
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Fechar qualquer editor aberto
+    this.fecharEdicaoPrioridadeHeader();
+
+    var ticketId = cell.getAttribute('data-ticket-id');
+    var currentPriority = cell.getAttribute('data-priority');
+
+    // Criar select inline
+    var selectHTML = '\n' +
+      '      <select\n' +
+      '        id="priority-editor-header-' + ticketId + '"\n' +
+      '        class="px-2 py-1 text-sm rounded-lg border border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white cursor-pointer"\n' +
+      '        data-ticket-id="' + ticketId + '"\n' +
+      '        data-original-priority="' + currentPriority + '"\n' +
+      '      >\n' +
+      '        <option value="LOW" ' + (currentPriority === 'LOW' ? 'selected' : '') + '>Baixa</option>\n' +
+      '        <option value="MEDIUM" ' + (currentPriority === 'MEDIUM' ? 'selected' : '') + '>Média</option>\n' +
+      '        <option value="HIGH" ' + (currentPriority === 'HIGH' ? 'selected' : '') + '>Alta</option>\n' +
+      '        <option value="URGENT" ' + (currentPriority === 'URGENT' ? 'selected' : '') + '>Urgente</option>\n' +
+      '      </select>\n' +
+      '    ';
+
+    // Substituir conteúdo da célula pelo select
+    cell.innerHTML = selectHTML;
+
+    var selectElement = document.getElementById('priority-editor-header-' + ticketId);
+
+    if (selectElement) {
+      // Prevenir propagação de eventos do select
+      selectElement.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+
+      selectElement.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+      });
+
+      // Focar no select imediatamente
+      selectElement.focus();
+
+      // Event listener para mudança de valor (salvar)
+      selectElement.addEventListener('change', function() {
+        var newPriority = this.value;
+        var originalPriority = this.getAttribute('data-original-priority');
+
+        // Só atualizar se realmente mudou
+        if (newPriority !== originalPriority) {
+          self.atualizarPrioridadeHeader(ticketId, newPriority, cell);
+        }
+      });
+
+      // Event listener para ESC (cancelar)
+      selectElement.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          self.fecharEdicaoPrioridadeHeader(cell, currentPriority);
+        }
+      });
+
+      // Event listener para click fora do select (fechar sem salvar)
+      setTimeout(function() {
+        document.addEventListener('click', function clickOutsideHandler(e) {
+          if (selectElement && !selectElement.contains(e.target)) {
+            self.fecharEdicaoPrioridadeHeader(cell, currentPriority);
+            document.removeEventListener('click', clickOutsideHandler);
+          }
+        });
+      }, 300);
+    }
+  },
+
+  /**
+   * Atualizar prioridade via N8N (header)
+   * @param {string} ticketId - ID do ticket
+   * @param {string} newPriority - Nova prioridade
+   * @param {HTMLElement} cell - Elemento para atualizar
+   */
+  atualizarPrioridadeHeader: function(ticketId, newPriority, cell) {
+    var self = this;
+
+    // Mostrar loading
+    cell.innerHTML = '\n' +
+      '      <div class="inline-flex items-center px-2 py-1">\n' +
+      '        <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">\n' +
+      '          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>\n' +
+      '          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>\n' +
+      '        </svg>\n' +
+      '      </div>\n' +
+      '    ';
+
+    // Preparar dados para N8N
+    var updateData = {
+      objectId: ticketId,
+      hs_ticket_priority: newPriority
+    };
+
+    console.log('📤 Atualizando prioridade (header):', updateData);
+
+    // Enviar para N8N
+    var endpointUrl = 'https://n8n2.rooftop.com.br/webhook/portal/update-ticket';
+
+    fetch(endpointUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData)
+    })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro HTTP: ' + response.status);
+        }
+        return response.text().then(function(text) {
+          try {
+            return text ? JSON.parse(text) : { success: true };
+          } catch (e) {
+            return { success: true, data: text };
+          }
+        });
+      })
+      .then(function(responseData) {
+        console.log('✅ Prioridade atualizada (header):', responseData);
+
+        // Atualizar célula com novo valor
+        cell.setAttribute('data-priority', newPriority);
+        cell.innerHTML = self.getPriorityBadgeHTML(newPriority);
+
+        // Mostrar feedback de sucesso
+        cell.classList.add('bg-green-50');
+        setTimeout(function() {
+          cell.classList.remove('bg-green-50');
+        }, 1000);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao atualizar prioridade (header):', error);
+
+        // Mostrar erro e restaurar valor original
+        cell.innerHTML = '\n' +
+          '        <span class="px-2 py-1 text-sm rounded-full bg-red-100 text-red-800">Erro ao salvar</span>\n' +
+          '      ';
+
+        // Recarregar página após 2 segundos
+        setTimeout(function() {
+          window.location.reload();
+        }, 2000);
+      });
+  },
+
+  /**
+   * Fechar editor de prioridade (header)
+   * @param {HTMLElement} cell - Célula para restaurar (opcional)
+   * @param {string} priority - Prioridade a restaurar (opcional)
+   */
+  fecharEdicaoPrioridadeHeader: function(cell, priority) {
+    var self = this;
+
+    // Se cell e priority forem fornecidos, restaurar valor
+    if (cell && priority) {
+      cell.innerHTML = this.getPriorityBadgeHTML(priority);
+    }
+
+    // Remover todos os editores abertos
+    var editors = document.querySelectorAll('[id^="priority-editor-header-"]');
+    editors.forEach(function(editor) {
+      var ticketId = editor.getAttribute('data-ticket-id');
+      var originalPriority = editor.getAttribute('data-original-priority');
+
+      if (ticketId && originalPriority) {
+        var parentCell = editor.closest('[data-priority-cell-header]');
+        if (parentCell) {
+          parentCell.innerHTML = self.getPriorityBadgeHTML(originalPriority);
+        }
+      }
+    });
   }
 
   };

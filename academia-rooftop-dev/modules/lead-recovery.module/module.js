@@ -260,25 +260,25 @@
       return `
         <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200" style="min-width: 1200px;">
+            <table class="min-w-full divide-y divide-gray-200" style="max-width: 1200px;">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 180px; max-width:180px">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px; max-width:120px">
                     Nome
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 220px; max-width:220px">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px; max-width:120px">
                     Email
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 130px;">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px;">
                     Telefone
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 180px;">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px;">
                     Data de Criação
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 140px;">
                     Última Atualização
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 250px;">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px;">
                     Ações
                   </th>
                 </tr>
@@ -357,7 +357,7 @@
 
       return `
         <tr class="hover:bg-gray-50" id="lead-row-${contact.vid}">
-          <td class="px-6 py-4" style="min-width: 280px;">
+          <td class="px-6 py-4" style="max-width: 280px;">
             <div class="flex items-center gap-1.5">
               <span class="text-sm font-medium text-gray-900">${nome}</span>
               ${isMQL ? `
@@ -412,6 +412,7 @@
                 </svg>
                 Visualizar
               </button>
+              
 
               <!-- Botão Acelerar -->
               <button

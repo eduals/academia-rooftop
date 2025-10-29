@@ -1269,15 +1269,25 @@
 
       return fields.map(function(field) {
         return `
-          <td class="px-4 py-4 text-sm text-gray-500">
-            <div
-              class="nova-celula-editavel font-medium text-gray-900 px-3 py-2 border-2 border-blue-300 rounded min-w-[80px] inline-block focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              contenteditable="true"
-              data-field="${field}"
-              spellcheck="false"
-              placeholder="0"
-              style="min-height: 36px; display: inline-flex; align-items: center;"
-            ></div>
+          <td class="px-4 py-4 text-sm text-gray-500" style="vertical-align: top;">
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+              <div
+                class="nova-celula-editavel font-medium text-gray-900 px-3 py-2 border-2 border-blue-300 rounded min-w-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                contenteditable="true"
+                data-field="${field}"
+                spellcheck="false"
+                placeholder="0"
+                style="min-height: 36px; display: flex; align-items: center;"
+              ></div>
+              <textarea
+                class="nova-celula-notes w-full px-2 py-1.5 text-xs border-2 border-blue-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-400 bg-white resize-vertical"
+                data-field="${field}_notes"
+                placeholder="Comentários..."
+                rows="2"
+                spellcheck="false"
+                style="min-height: 48px; font-family: inherit;"
+              ></textarea>
+            </div>
           </td>
         `;
       }).join('');
@@ -1323,18 +1333,22 @@
         var field = celula.getAttribute('data-field');
         var value = celula.textContent.trim();
 
+        // Buscar o textarea de notes correspondente
+        var notesTextarea = document.querySelector('#nova-linha-indicador textarea[data-field="' + field + '_notes"]');
+        var notesValue = notesTextarea ? notesTextarea.value.trim() : '';
+
         // Se vazio ou "-", enviar null
         if (value === '' || value === '-') {
           payload[field] = null;
-          payload[field + '_notes'] = '';
+          payload[field + '_notes'] = notesValue;
         } else if (!isNaN(value)) {
           payload[field] = parseInt(value);
-          payload[field + '_notes'] = '';
+          payload[field + '_notes'] = notesValue;
           algumValorPreenchido = true;
         } else {
           // Valor inválido
           payload[field] = null;
-          payload[field + '_notes'] = '';
+          payload[field + '_notes'] = notesValue;
         }
       });
 

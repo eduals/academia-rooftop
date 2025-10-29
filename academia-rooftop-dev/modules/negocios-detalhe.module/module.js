@@ -748,6 +748,9 @@
                                             <p class="text-sm text-green-700 mt-1">
                                                 A avaliação externa do imóvel foi realizada. O laudo está disponível para consulta.
                                             </p>
+                                            <p class="text-sm text-green-700 mt-1">
+                                                Nosso time está trabalhando para liberar a proposta para consulta.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -2100,7 +2103,7 @@
         { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] }, // agrupa etapas de Em analise do backoffice e avaliação do imovel. (pipeline de Franquias)
         { id: '1062003577', label: 'Proposta disponivel para apresentação' }, // Sem combinedIds - 1207696559 é etapa independente
 
-        { id: '1207696559', label: '2ª Reunião marcada' },
+        { id: '1207696559', label: '2ª Reunião marcada', combinedIds: ['1207696559' , '1207696560'] },
         // { id: '1207696560', label: '2ª Reunião realizada' }, // Não usada - agrupada em outras etapas
 
         { id: '1062003578', label: 'Pedido de Contraproposta do cliente' },
@@ -4886,10 +4889,10 @@
                   <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
                   <select id="apresentacao-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
                     <option value="">Selecione o próximo passo</option>
-                    <option value="formalizar">Pode seguir para formalização</option>
-                    <option value="renegociar">Cliente quer renegociar a proposta</option>
-                    <option value="standby">Pausar negociação e esperar novo contato</option>
-                    <option value="perdido">Cliente NÃO quer seguir (perder o lead)</option>
+                    <option value="formalizar">Solicitar formalização de contrato</option>
+                    <option value="renegociar">Solicitar reajuste da proposta</option>
+                    <option value="standby">Pausar negociação (Stand by)</option>
+                    <option value="perdido">Cliente NÃO quer seguir (Perder o lead)</option>
                   </select>
                 </div>
 
@@ -6024,12 +6027,12 @@
                             <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827;">Solicitar Avaliação Externa</h3>
                         </div>
                         <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Descrição (opcional)</label>
-                            <textarea id="avaliacao-descricao" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; resize: vertical; min-height: 80px;" placeholder="Descreva detalhes sobre a avaliação externa..."></textarea>
+                            <label style="required display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Descrição (obrigatório)</label>
+                            <textarea required id="avaliacao-descricao" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; resize: vertical; min-height: 80px;" placeholder="Descreva detalhes sobre a avaliação externa..."></textarea>
                         </div>
                         <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e horário combinado (opcional)</label>
-                            <input type="datetime-local" id="avaliacao-data-hora" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem;">
+                            <label style="required display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e horário combinado (obrigatório)</label>
+                            <input required type="datetime-local" id="avaliacao-data-hora" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem;">
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                             <button id="avaliacao-cancel" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">Cancelar</button>
@@ -6048,9 +6051,22 @@
         });
         
         document.getElementById('avaliacao-confirm').addEventListener('click', function() {
-            var descricao = document.getElementById('avaliacao-descricao').value;
+            var descricao = document.getElementById('avaliacao-descricao').value.trim();
             var dataHora = document.getElementById('avaliacao-data-hora').value;
-            
+
+            // Validação dos campos obrigatórios
+            if (!descricao) {
+                alert('Por favor, preencha a descrição da avaliação.');
+                document.getElementById('avaliacao-descricao').focus();
+                return;
+            }
+
+            if (!dataHora) {
+                alert('Por favor, selecione a data e horário combinado.');
+                document.getElementById('avaliacao-data-hora').focus();
+                return;
+            }
+
             self.solicitarAvaliacaoExterna(descricao, dataHora);
         });
     },

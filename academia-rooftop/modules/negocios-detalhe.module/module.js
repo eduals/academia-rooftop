@@ -2,6 +2,8 @@
 (function() {
   'use strict';
   
+  console.log('v2.0.0')
+
   var module = {
     selectedPhotoFiles: null,
     modalPhotos: [],
@@ -1465,6 +1467,23 @@
       // Verificar se o ticket está na etapa "Proposta disponivel para apresentação" ou posterior
       const currentStageId = ticket?.hs_pipeline_stage;
       const propostaDisponivelId = '1062003577';
+      const avaliacaoExternaStageId = '1186972699';
+
+      // Determinar se é Fluxo 2 (acima de R$2M)
+      const valorLimpo = ticket?.valor_medio_amostras ? String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+      // Converter valor removendo pontos, vírgulas e espaços, mantendo apenas números
+      const valorMedioAmostrasNumero = valorLimpo ? parseFloat(valorLimpo.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0;
+      const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+
+      // Verificar se valores do comitê investidor estão preenchidos
+      const valoresComiteInvestidorPreenchidos = !isCompraZero && !isLocacaoZero;
+
+      // Lógica de exibição para Fluxo 2:
+      // - Se fluxo 2 E está na etapa de avaliação externa: ocultar valores do comitê interno e primeira proposta
+      // - Se fluxo 2 E valores do comitê investidor preenchidos: mostrar tudo
+      // - Se fluxo 2 E valores do comitê investidor NÃO preenchidos: ocultar valores e propostas
+      const shouldHideComiteInternoValues = isFluxo2 && currentStageId === avaliacaoExternaStageId && !valoresComiteInvestidorPreenchidos;
+      const shouldShowFluxo2Content = isFluxo2 && valoresComiteInvestidorPreenchidos;
 
       // Lista ordenada das etapas do funil
       const stageOrder = [
@@ -1495,9 +1514,10 @@
       // Encontrar índice da etapa atual e da etapa de proposta disponível
       const currentIndex = stageOrder.indexOf(currentStageId);
       const propostaIndex = stageOrder.indexOf(propostaDisponivelId);
-      console.log('currentStageId', currentStageId)
-      console.log('currentIndex', currentIndex)
-      console.log('propostaIndex', propostaIndex)
+
+      // console.log('currentStageId', currentStageId)
+      // console.log('currentIndex', currentIndex)
+      // console.log('propostaIndex', propostaIndex)
       // Se a etapa atual está antes da "Proposta disponivel para apresentação", bloquear visualização
       const shouldBlurValues = currentIndex !== -1 && currentIndex < propostaIndex;
 
@@ -1510,6 +1530,7 @@
 
       return `
           <div class="card p-6">
+              ${shouldHideComiteInternoValues ? '' : `
               <h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação pós comitê interno</h2>
               <div class="space-y-3 mb-6" ${blurClass}>
                   <div class="flex justify-between items-center py-2 border-b border-slate-100">
@@ -1524,9 +1545,14 @@
                       <p class="text-sm font-medium text-slate-600">Valor de Liquidez (Líquido)</p>
                       <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLiquidez}</p>
                   </div>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                      <p class="text-sm font-medium text-slate-600">Valor de Liquidez (Bruto)</p>
+                      <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLiquidezBruto}</p>
+                  </div>
               </div>
 
               <!-- Apresentação da Proposta -->
+              ${isFluxo2 ? '' : `
               <div class="mb-6">
                   <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                       <div class="flex flex-col gap-3">
@@ -1535,7 +1561,7 @@
                               <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                           </div>
                           <button
-                             ${shouldBlurValues || !resumoAprovacao.linkApresentacao ? 'disabled' : `onclick="window.open('${resumoAprovacao.linkApresentacao}', '_blank')"`}
+                             ${shouldBlurValues || !resumoAprovacao.linkApresentacao ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkApresentacao || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
                              class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${buttonStyleClass} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
                               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -1545,9 +1571,11 @@
                       </div>
                   </div>
               </div>
+              `}
+              `}
 
               <!-- Histórico de Versões da Proposta -->
-              ${resumoAprovacao.historicoPropostas && resumoAprovacao.historicoPropostas.historico && resumoAprovacao.historicoPropostas.historico.length > 0 ? `
+              ${!shouldHideComiteInternoValues && resumoAprovacao.historicoPropostas && resumoAprovacao.historicoPropostas.historico && resumoAprovacao.historicoPropostas.historico.length > 0 ? `
               <div class="mb-6">
                   <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
                       <p class="text-xs font-medium text-slate-600 mb-2">Versões Anteriores</p>
@@ -1570,6 +1598,7 @@
               </div>
               ` : ''}
 
+              ${shouldHideComiteInternoValues && !shouldShowFluxo2Content ? '' : `
               <h2 class="text-lg font-semibold text-slate-900 mb-4 mt-8">Resumo da Aprovação pós comitê investidor</h2>
 
               <!-- Valores Aprovados -->
@@ -1584,6 +1613,11 @@
                       <p class="text-sm font-medium text-blue-800">Valor Aprovado (Locação 12m)</p>
                       <p class="text-2xl font-bold text-blue-700 mt-1">${resumoAprovacao.valorLocacao12}</p>
                   </div>
+                  <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 ${isCompraZero || isLocacaoZero ? 'relative' : ''}" ${isCompraZero || isLocacaoZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
+                      ${isCompraZero || isLocacaoZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
+                      <p class="text-sm font-medium text-purple-800">Valor de Liquidez (Bruto)</p>
+                      <p class="text-2xl font-bold text-purple-700 mt-1">${valoresAvaliacao.valorLiquidezBruto}</p>
+                  </div>
               </div>             
 
               <!-- Comentários do Comitê -->
@@ -1591,9 +1625,50 @@
                   <p class="text-sm font-medium text-slate-500 mb-2">Comentários do Comitê</p>
                   <p class="text-base text-slate-700">${resumoAprovacao.comentarios}</p>
               </div>
+              `}
 
-              <!-- Proposta validada pelo comite investidor -->
-              ${resumoAprovacao.linkPropostaFinalComite ? `
+              <!-- Propostas para Fluxo 2 (após comitê investidor) ou Fluxo 1 normal -->
+              ${shouldShowFluxo2Content && resumoAprovacao.linkPropostaFinalComite ? `
+              <!-- 1ª Proposta (Fluxo 2 - mesma da 2ª) -->
+              <div class="mb-6 mt-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">Apresentação da Proposta</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             onclick="window.open('${(resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'")}', '_blank')"
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              Abrir Apresentação
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <!-- 2ª Proposta (Fluxo 2) -->
+              <div class="mb-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">Proposta validada pelo comite investidor</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             onclick="window.open('${(resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'")}', '_blank')"
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-orange-700 bg-white hover:bg-orange-100 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              Abrir Apresentação
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              ` : (!isFluxo2 && resumoAprovacao.linkPropostaFinalComite ? `
+              <!-- Proposta validada pelo comite investidor (Fluxo 1) -->
               <div class="mb-6 mt-6">
                   <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                       <div class="flex flex-col gap-3">
@@ -1602,7 +1677,7 @@
                               <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                           </div>
                           <button
-                             ${isCompraZero || isLocacaoZero || !resumoAprovacao.linkPropostaFinalComite ? 'disabled' : `onclick="window.open('${resumoAprovacao.linkPropostaFinalComite}', '_blank')"`}
+                             ${isCompraZero || isLocacaoZero || !resumoAprovacao.linkPropostaFinalComite ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
                              class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${isCompraZero || isLocacaoZero || !resumoAprovacao.linkPropostaFinalComite ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-orange-700 bg-white hover:bg-orange-100'} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
                               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -1612,7 +1687,7 @@
                       </div>
                   </div>
               </div>
-              ` : ''}
+              ` : '')}
           </div>`;
     },
 
@@ -2601,11 +2676,12 @@
     },
 
     getValoresAvaliacao: function(ticket) {
-        if (!ticket) return { valorAvaliado: 'N/A', valorLocacao: 'N/A', valorLiquidez: 'N/A' };
+        if (!ticket) return { valorAvaliado: 'N/A', valorLocacao: 'N/A', valorLiquidez: 'N/A', valorLiquidezBruto: 'N/A' };
         return {
             valorAvaliado: this.formatCurrency(ticket.valor_avaliado),
             valorLocacao: this.formatCurrency(ticket.valor_da_locacao),
             valorLiquidez: this.formatCurrency(ticket.valor_de_liquidez__para_cliente_),
+            valorLiquidezBruto: this.formatCurrency(ticket.valor_de_liquidez__bruto_),
         };
     },
 

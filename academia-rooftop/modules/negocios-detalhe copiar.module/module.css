@@ -1,0 +1,255 @@
+/* Breadcrumb Progress Steps */
+.breadcrumb-container {
+    margin: auto;
+    padding-bottom: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    text-align: left;
+    /* Esconder scrollbar */
+    -ms-overflow-style: none;  /* IE e Edge */
+    scrollbar-width: none;     /* Firefox */
+}
+
+/* Esconder scrollbar no WebKit */
+.breadcrumb-container::-webkit-scrollbar {
+    display: none;
+}
+
+.breadcrumb-step {
+    display: inline-block;
+    position: relative;
+    height: 40px;
+    line-height: 40px;
+    padding: 0 24px;
+    border: 1px solid #d1d5db;
+    margin-right: 12px;
+    background-color: white;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+/* Cada step subsequente tem z-index maior para setas ficarem corretas */
+.breadcrumb-step:nth-child(2) { z-index: 2; }
+.breadcrumb-step:nth-child(3) { z-index: 3; }
+.breadcrumb-step:nth-child(4) { z-index: 4; }
+.breadcrumb-step:nth-child(5) { z-index: 5; }
+.breadcrumb-step:nth-child(6) { z-index: 6; }
+.breadcrumb-step:nth-child(7) { z-index: 7; }
+.breadcrumb-step:nth-child(8) { z-index: 8; }
+.breadcrumb-step:nth-child(9) { z-index: 9; }
+.breadcrumb-step:nth-child(10) { z-index: 10; }
+.breadcrumb-step:nth-child(11) { z-index: 11; }
+.breadcrumb-step:nth-child(12) { z-index: 12; }
+.breadcrumb-step:nth-child(13) { z-index: 13; }
+
+/* Seta direita - ponta apontando para direita */
+.breadcrumb-step.breadcrumb-right:after {
+    content: '';
+    border-top: 1px solid #d1d5db;
+    border-right: 1px solid #d1d5db;
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    right: -10px;
+    top: 10px;
+    background-color: inherit;
+    z-index: 10;
+    
+    -webkit-transform: rotate(45deg);
+       -moz-transform: rotate(45deg);
+        -ms-transform: rotate(45deg);
+         -o-transform: rotate(45deg); 
+            transform: rotate(45deg);
+}
+
+/* Seta esquerda - entrada do step */
+.breadcrumb-step.breadcrumb-left:before {
+    content: '';
+    border-top: 1px solid #d1d5db;
+    border-right: 1px solid #d1d5db;
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    left: -9px;
+    top: 10px;
+    background-color: white;
+    z-index: 1;
+    
+    -webkit-transform: rotate(45deg);
+       -moz-transform: rotate(45deg);
+        -ms-transform: rotate(45deg);
+         -o-transform: rotate(45deg);
+            transform: rotate(45deg);
+}
+
+/* Steps clicáveis */
+.breadcrumb-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.breadcrumb-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb-clickable:hover:after {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb-clickable:active {
+    transform: translateY(0px);
+}
+
+/* Hover específico para steps completados clicáveis */
+.breadcrumb-completed.breadcrumb-clickable:hover {
+    background-color: #059669 !important;
+    border-color: #059669 !important;
+}
+
+.breadcrumb-completed.breadcrumb-clickable:hover:after {
+    background-color: #059669 !important;
+    border-top-color: #059669 !important;
+    border-right-color: #059669 !important;
+}
+
+/* Hover específico para steps ativos clicáveis */
+.breadcrumb-active.breadcrumb-clickable:hover {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.breadcrumb-active.breadcrumb-clickable:hover:after {
+    background-color: #2563eb !important;
+    border-top-color: #2563eb !important;
+    border-right-color: #2563eb !important;
+}
+
+/* Hover específico para steps inativos clicáveis */
+.breadcrumb-inactive.breadcrumb-clickable:hover {
+    background-color: #e5e7eb !important;
+    border-color: #9ca3af !important;
+    color: #374151 !important;
+}
+
+.breadcrumb-inactive.breadcrumb-clickable:hover:after {
+    background-color: #e5e7eb !important;
+    border-top-color: #9ca3af !important;
+    border-right-color: #9ca3af !important;
+}
+
+/* Indicador visual para steps clicáveis */
+.clickable-indicator {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.breadcrumb-clickable:hover .clickable-indicator {
+    opacity: 1;
+}
+
+/* Estados dos steps */
+.breadcrumb-completed {
+    background-color: #10b981 !important;
+    color: white !important;
+    border-color: #10b981 !important;
+}
+
+.breadcrumb-completed:after {
+    background-color: #10b981 !important;
+    border-top-color: #10b981 !important;
+    border-right-color: #10b981 !important;
+}
+
+.breadcrumb-completed-warning {
+    background-color: #eab308 !important;
+    color: white !important;
+    border-color: #eab308 !important;
+}
+
+.breadcrumb-completed-warning:after {
+    background-color: #eab308 !important;
+    border-top-color: #eab308 !important;
+    border-right-color: #eab308 !important;
+}
+
+.breadcrumb-active {
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-color: #3b82f6 !important;
+}
+
+.breadcrumb-active:after {
+    background-color: #3b82f6 !important;
+    border-top-color: #3b82f6 !important;
+    border-right-color: #3b82f6 !important;
+}
+
+.breadcrumb-active-failed {
+    background-color: #ef4444 !important;
+    color: white !important;
+    border-color: #ef4444 !important;
+}
+
+.breadcrumb-active-failed:after {
+    background-color: #ef4444 !important;
+    border-top-color: #ef4444 !important;
+    border-right-color: #ef4444 !important;
+}
+
+.breadcrumb-inactive {
+    background-color: #f3f4f6 !important;
+    color: #6b7280 !important;
+    border-color: #d1d5db !important;
+}
+
+.breadcrumb-inactive:after {
+    background-color: #f3f4f6 !important;
+    border-top-color: #d1d5db !important;
+    border-right-color: #d1d5db !important;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .breadcrumb-container {
+        padding: 10px;
+    }
+    
+    .breadcrumb-step {
+        height: 36px;
+        line-height: 36px;
+        padding: 0 16px;
+        margin-right: 10px;
+        font-size: 13px;
+    }
+    
+    .breadcrumb-step.breadcrumb-right:after {
+        right: -8px;
+        top: 8px;
+        width: 16px;
+        height: 16px;
+        transform: rotate(45deg);
+        z-index: 10;
+    }
+    
+    .breadcrumb-step.breadcrumb-left:before {
+        left: -8px;
+        top: 8px;
+        width: 16px;
+        height: 16px;
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+}
+
+
+/* Classe customizada para a transição da altura máxima */
+.transition-max-height {
+    transition: max-height 0.7s ease-in-out;
+}

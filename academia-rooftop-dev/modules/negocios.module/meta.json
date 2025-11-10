@@ -3,7 +3,7 @@
   "content_types" : [ "MEMBERSHIP", "SITE_PAGE", "CUSTOMER_PORTAL" ],
   "smart_type" : "NOT_SMART",
   "host_template_types" : [ "PAGE", "BLOG_LISTING", "BLOG_POST", "MEMBERSHIP" ],
-  "module_id" : 192774658639,
+  "module_id" : 195724820113,
   "css_assets" : [ {
     "autoload" : true,
     "path" : "module.css",

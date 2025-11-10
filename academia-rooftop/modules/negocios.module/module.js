@@ -61,9 +61,11 @@
       this.contentEl = this.container.querySelector('.negocios-content');
       this.errorEl = this.container.querySelector('.negocios-error');
 
-      this.currentFilter = 'todos';
+      // ✅ FILTRO MULTI-SELECT: Inicializar com todos os status exceto Perdido e Descartado
+      this.selectedStatuses = this.initSelectedStatuses();
       this.currentDateFilter = 'todas';
       this.currentPriorityFilter = 'todas';
+      this.statusDropdownOpen = false;
 
       // ✅ GARANTIR QUE O BOTÃO COMECE ESCONDIDO
       this.hideHeaderButton();
@@ -256,6 +258,9 @@
       // console.log('negocios handleNegociosResponse', negocios);
       this.hideAllSections();
 
+      // ✅ ARMAZENAR DADOS DOS NEGÓCIOS PARA RE-RENDERIZAÇÃO
+      this.cachedNegocios = negocios;
+
       // ✅ VERIFICAR SE HÁ DADOS REAIS ANTES DE MOSTRAR EMPTY STATE
       // console.log('🔍 Verificando dados recebidos:', {
       //   negocios: negocios,
@@ -284,21 +289,78 @@
     },
 
     generateNegociosHTML: function (negocios) {
+      var self = this;
+      var allStatuses = this.getAllFranquiaStatuses();
+      var statusDisplayText = this.getStatusDisplayText();
+      
+      // Garantir que selectedStatuses está inicializado
+      if (!this.selectedStatuses) {
+        this.selectedStatuses = this.initSelectedStatuses();
+      }
+      
+      // Gerar HTML dos checkboxes de status
+      var statusCheckboxesHTML = allStatuses.map(function(status) {
+        var isChecked = self.selectedStatuses && self.selectedStatuses.indexOf(status.code) !== -1;
+        return `
+          <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input 
+              type="checkbox" 
+              value="${status.code}" 
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              ${isChecked ? 'checked' : ''}
+              data-status-code="${status.code}"
+            >
+            <span class="ml-3 text-sm text-gray-700">${status.label}</span>
+          </label>
+        `;
+      }).join('');
+
       return `
          <div class="space-y-6">
                                                <!-- Filtros -->
              <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                  
-                 <!-- Filtro de Status -->
-                 <div>
-                   <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                   <select id="status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 cursor-pointer">
-                     <option value="todos" ${this.currentFilter === 'todos' ? 'selected' : ''}>Todos</option>
-                     <option value="abertos" ${this.currentFilter === 'abertos' ? 'selected' : ''}>Abertos</option>
-                     <option value="ganhos" ${this.currentFilter === 'ganhos' ? 'selected' : ''}>Ganhos</option>
-                     <option value="perdidos" ${this.currentFilter === 'perdidos' ? 'selected' : ''}>Perdidos</option>
-                   </select>
+                 <!-- Filtro de Status (Multi-Select) -->
+                 <div class="relative">
+                   <label for="status-filter-btn" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                   <button 
+                     id="status-filter-btn" 
+                     type="button"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 cursor-pointer text-left flex items-center justify-between"
+                     onclick="window.negociosModule.toggleStatusDropdown()"
+                   >
+                     <span id="status-filter-text" class="truncate">${statusDisplayText}</span>
+                     <svg class="w-5 h-5 text-gray-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                     </svg>
+                   </button>
+                   <div 
+                     id="status-filter-dropdown" 
+                     class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                   >
+                     <!-- Botões de ação rápida -->
+                     <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-3 py-2 flex gap-2 z-10">
+                       <button 
+                         type="button"
+                         onclick="window.negociosModule.selectAllStatuses()"
+                         class="flex-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                       >
+                         Selecionar todos
+                       </button>
+                       <button 
+                         type="button"
+                         onclick="window.negociosModule.deselectAllStatuses()"
+                         class="flex-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                       >
+                         Deselecionar todos
+                       </button>
+                     </div>
+                     <!-- Lista de checkboxes -->
+                     <div class="max-h-56 overflow-y-auto">
+                       ${statusCheckboxesHTML}
+                     </div>
+                   </div>
                  </div>
 
                  <!-- Filtro de Data -->
@@ -533,35 +595,16 @@
 
     getFilteredNegocios: function (negocios) {
       var filtered = negocios;
+      var self = this;
 
-      // ✅ FILTRO POR STATUS (usando códigos da franquia)
-      switch (this.currentFilter) {
-        case 'abertos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Todos exceto ganhos e perdidos
-            return stage && !['1095528870', '1095528871', '1095528872', '1095528873'].includes(stage);
-          });
-          break;
-        case 'ganhos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Finalização do pagamento, Em locação
-            return stage && ['1095528870', '1095528871'].includes(stage);
-          });
-          break;
-        case 'perdidos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Descartado, Perdido
-            return stage && ['1095528872', '1095528873'].includes(stage);
-          });
-          break;
-        // 'todos' e 'fechados' removidos conforme mapeamento
-        default:
-          // Todos os registros
-          break;
+      // ✅ FILTRO POR STATUS (multi-select)
+      if (this.selectedStatuses && this.selectedStatuses.length > 0) {
+        filtered = filtered.filter(function(n) {
+          var stage = n.ticket_franquia_stage;
+          return stage && self.selectedStatuses.indexOf(stage) !== -1;
+        });
       }
+      // Se nenhum status selecionado, mostrar todos (comportamento padrão)
 
       // ✅ FILTRO POR DATA
       if (this.currentDateFilter && this.currentDateFilter !== 'todas') {
@@ -663,6 +706,54 @@
       return franquiaStatusMap[stage] || { label: 'Status não identificado', color: 'bg-gray-100 text-gray-800' };
     },
 
+    /**
+     * Retorna array com todos os status na ordem do pipeline
+     * @returns {Array} Array de objetos {code, label, color}
+     */
+    getAllFranquiaStatuses: function () {
+      return [
+        { code: '1095534672', label: 'Lead inicial', color: 'bg-gray-100 text-gray-800' },
+        { code: '1095534673', label: 'Reunião marcada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1095534674', label: 'Reunião realizada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1095534675', label: 'Aguardando documentação', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1043275525', label: 'Documentação enviada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1043275526', label: 'Aguardando documentos complementares', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1043275527', label: 'Em análise do backoffice', color: 'bg-purple-100 text-purple-800' },
+        { code: '1062003577', label: 'Apresentação da proposta', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1186972699', label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
+        { code: '1206453052', label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+        { code: '1062003578', label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
+        { code: '1095528865', label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
+        { code: '1095528866', label: 'Reajuste da proposta', color: 'bg-orange-100 text-orange-800' },
+        { code: '1095528867', label: 'Documentação para formalização', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1095528868', label: 'Formalização Jurídica', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1095528869', label: 'Condicionais e Registro do imóveis', color: 'bg-purple-100 text-purple-800' },
+        { code: '1095528870', label: 'Finalização do pagamento', color: 'bg-green-100 text-green-800' },
+        { code: '1095528871', label: 'Em locação', color: 'bg-green-100 text-green-800' },
+        { code: '1095528872', label: 'Descartado', color: 'bg-gray-100 text-gray-800' },
+        { code: '1095528873', label: 'Perdido', color: 'bg-red-100 text-red-800' }
+      ];
+    },
+
+    /**
+     * Inicializar array de status selecionados (todos exceto Perdido e Descartado)
+     * @returns {Array} Array de códigos de status
+     */
+    initSelectedStatuses: function () {
+      var allStatuses = this.getAllFranquiaStatuses();
+      var selected = [];
+      
+      for (var i = 0; i < allStatuses.length; i++) {
+        var status = allStatuses[i];
+        // Excluir Perdido (1095528873) e Descartado (1095528872)
+        if (status.code !== '1095528873' && status.code !== '1095528872') {
+          selected.push(status.code);
+        }
+      }
+      
+      return selected;
+    },
+
     getPrioridadeInfo: function (priority) {
       var prioridadeMap = {
         'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
@@ -709,10 +800,169 @@
       }
     },
 
-    filterBy: function (filter) {
-      this.currentFilter = filter;
-      // console.log('🔍 Filtro Status alterado para:', filter);
+    /**
+     * Abrir/fechar dropdown de status
+     */
+    toggleStatusDropdown: function () {
+      var dropdown = document.getElementById('status-filter-dropdown');
+      if (!dropdown) return;
+
+      var isOpen = !dropdown.classList.contains('hidden');
+      
+      if (isOpen) {
+        this.closeStatusDropdown();
+      } else {
+        dropdown.classList.remove('hidden');
+        this.statusDropdownOpen = true;
+        // Adicionar listener para fechar ao clicar fora
+        setTimeout(function() {
+          document.addEventListener('click', function closeHandler(e) {
+            var btn = document.getElementById('status-filter-btn');
+            var dropdownEl = document.getElementById('status-filter-dropdown');
+            
+            if (dropdownEl && btn && !dropdownEl.contains(e.target) && !btn.contains(e.target)) {
+              window.negociosModule.closeStatusDropdown();
+              document.removeEventListener('click', closeHandler);
+            }
+          });
+        }, 100);
+      }
+    },
+
+    /**
+     * Fechar dropdown de status
+     */
+    closeStatusDropdown: function () {
+      var dropdown = document.getElementById('status-filter-dropdown');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        this.statusDropdownOpen = false;
+      }
+    },
+
+    /**
+     * Alternar seleção de um status
+     * @param {string} statusCode - Código do status
+     */
+    toggleStatusSelection: function (statusCode) {
+      var index = this.selectedStatuses.indexOf(statusCode);
+      
+      if (index !== -1) {
+        // Remover se já estiver selecionado
+        this.selectedStatuses.splice(index, 1);
+      } else {
+        // Adicionar se não estiver selecionado
+        this.selectedStatuses.push(statusCode);
+      }
+      
+      // Atualizar checkbox visualmente
+      this.updateCheckboxState(statusCode);
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
       this.reloadTable();
+    },
+
+    /**
+     * Selecionar todos os status
+     */
+    selectAllStatuses: function () {
+      var allStatuses = this.getAllFranquiaStatuses();
+      this.selectedStatuses = [];
+      
+      for (var i = 0; i < allStatuses.length; i++) {
+        this.selectedStatuses.push(allStatuses[i].code);
+      }
+      
+      // Atualizar todos os checkboxes
+      this.updateAllCheckboxes();
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
+      this.reloadTable();
+    },
+
+    /**
+     * Deselecionar todos os status
+     */
+    deselectAllStatuses: function () {
+      this.selectedStatuses = [];
+      
+      // Atualizar todos os checkboxes
+      this.updateAllCheckboxes();
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
+      this.reloadTable();
+    },
+
+    /**
+     * Atualizar estado visual de um checkbox específico
+     * @param {string} statusCode - Código do status
+     */
+    updateCheckboxState: function (statusCode) {
+      var checkbox = document.querySelector('input[data-status-code="' + statusCode + '"]');
+      if (checkbox) {
+        checkbox.checked = this.selectedStatuses.indexOf(statusCode) !== -1;
+      }
+    },
+
+    /**
+     * Atualizar estado visual de todos os checkboxes
+     */
+    updateAllCheckboxes: function () {
+      var self = this;
+      var checkboxes = document.querySelectorAll('input[data-status-code]');
+      checkboxes.forEach(function(checkbox) {
+        var statusCode = checkbox.getAttribute('data-status-code');
+        checkbox.checked = self.selectedStatuses.indexOf(statusCode) !== -1;
+      });
+    },
+
+    /**
+     * Atualizar texto do botão de status
+     */
+    updateStatusButtonText: function () {
+      var textEl = document.getElementById('status-filter-text');
+      if (textEl) {
+        textEl.textContent = this.getStatusDisplayText();
+      }
+    },
+
+    /**
+     * Obter texto formatado para exibição no botão
+     * @returns {string} Texto formatado
+     */
+    getStatusDisplayText: function () {
+      var total = this.getAllFranquiaStatuses().length;
+      var selected = (this.selectedStatuses && this.selectedStatuses.length) ? this.selectedStatuses.length : 0;
+      
+      if (selected === 0) {
+        return 'Nenhum status selecionado';
+      } else if (selected === total) {
+        return 'Todos os status selecionados';
+      } else if (selected <= 3 && this.selectedStatuses) {
+        // Mostrar nomes dos status selecionados se forem poucos
+        var allStatuses = this.getAllFranquiaStatuses();
+        var selectedLabels = [];
+        for (var i = 0; i < this.selectedStatuses.length; i++) {
+          for (var j = 0; j < allStatuses.length; j++) {
+            if (allStatuses[j].code === this.selectedStatuses[i]) {
+              selectedLabels.push(allStatuses[j].label);
+              break;
+            }
+          }
+        }
+        return selectedLabels.join(', ');
+      } else {
+        return selected + ' de ' + total + ' status selecionados';
+      }
     },
 
     // ✅ FILTRO POR DATA (nova função para selects)
@@ -731,8 +981,13 @@
 
     // ✅ RECARREGAR TABELA (sem skeleton, apenas atualizar conteúdo)
     reloadTable: function () {
-      // Recarregar dados via API
-      this.loadNegocios();
+      // Se temos dados em cache, apenas re-renderizar
+      if (this.cachedNegocios && this.cachedNegocios.length > 0) {
+        this.renderNegocios(this.cachedNegocios);
+      } else {
+        // Se não temos cache, buscar da API
+        this.loadNegocios();
+      }
     },
 
     viewNegocio: function (negocioId, ticketHomecashId) {
@@ -772,14 +1027,37 @@
     addEventListeners: function () {
       var self = this;
 
-      // ✅ EVENT LISTENERS PARA OS SELECTS DE FILTRO
-      var statusSelect = document.getElementById('status-filter');
-      if (statusSelect) {
-        statusSelect.addEventListener('change', function () {
-          self.filterBy(this.value);
+      // ✅ EVENT LISTENERS PARA CHECKBOXES DE STATUS
+      var statusCheckboxes = document.querySelectorAll('input[type="checkbox"][data-status-code]');
+      statusCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+          var statusCode = this.getAttribute('data-status-code');
+          self.toggleStatusSelection(statusCode);
+        });
+        
+        // Prevenir que o click no checkbox feche o dropdown
+        checkbox.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
+
+      // ✅ EVENT LISTENERS PARA BOTÕES DE SELEÇÃO RÁPIDA
+      var selectAllBtn = document.querySelector('[onclick*="selectAllStatuses"]');
+      var deselectAllBtn = document.querySelector('[onclick*="deselectAllStatuses"]');
+      
+      if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      }
+      
+      if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
         });
       }
 
+      // ✅ EVENT LISTENERS PARA OS SELECTS DE FILTRO (Data e Prioridade)
       var dateSelect = document.getElementById('date-filter');
       if (dateSelect) {
         dateSelect.addEventListener('change', function () {

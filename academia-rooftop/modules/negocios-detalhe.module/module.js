@@ -371,7 +371,15 @@
         // A lógica de exibição do warn agora está dentro da função getNextStepInfo()
         // na etapa "Avaliação externa" ao invés de no topo do progress stepper
 
+        // Determinar se é Fluxo 2 (acima de R$2M) para renomear "Segunda proposta cliente"
+        const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+
         const stepsHTML = steps.map((step, index) => {
+            // Renomear "Segunda proposta cliente" para "Proposta Comitê Investidor" quando isFluxo2 === true
+            let stepLabel = step.label;
+            if (isFluxo2 && step.id === '1208820114' && step.label === 'Segunda proposta cliente') {
+                stepLabel = 'Proposta Comitê Investidor';
+            }
             const isCompleted = index < currentIndex;
             const isCurrent = index === currentIndex;
             const isFuture = index > currentIndex;
@@ -423,20 +431,20 @@
                 const dateText = completionDate ? `Concluído em ${completionDate}` : 'Data de conclusão não disponível';
                 content = `
                     <div class="pt-1 ml-4">
-                        <p class="font-semibold ${titleColor}">${step.label}</p>
+                        <p class="font-semibold ${titleColor}">${stepLabel}</p>
                         <p class="text-sm text-slate-500">${dateText}</p>
                     </div>
                 `;
             } else if (isCurrent) {
                 // Etapa atual - mostrar com animação e próximo passo
-                const nextStepInfo = this.getNextStepInfo(step.label, ticketPortal);
+                const nextStepInfo = this.getNextStepInfo(stepLabel, ticketPortal);
                 content = `
                     <div>
-                        <p class="font-semibold text-blue-600">${step.label}</p>
+                        <p class="font-semibold text-blue-600">${stepLabel}</p>
                         <p class="text-sm text-slate-500">Você está nesta etapa.</p>
                         ${nextStepInfo ? `
                             <div class="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                <p class="text-sm font-medium text-slate-700">${step.label === 'Descartado' || step.label === 'Perdido' ? 'Motivo do descarte:' : 'Próximo passo:'}</p>
+                                <p class="text-sm font-medium text-slate-700">${stepLabel === 'Descartado' || stepLabel === 'Perdido' ? 'Motivo do descarte:' : 'Próximo passo:'}</p>
                                 <p class="text-sm text-slate-500 mb-3">${nextStepInfo.description}</p>
                                 ${nextStepInfo.actionButton || ''}
                             </div>
@@ -447,7 +455,7 @@
                 // Etapa futura
                 content = `
                     <div class="pt-1 ml-4">
-                        <p class="font-semibold text-slate-800">${step.label}</p>
+                        <p class="font-semibold text-slate-800">${stepLabel}</p>
                     </div>
                 `;
             }
@@ -1020,13 +1028,35 @@
                 // `
             },
             'Segunda proposta cliente': {
-                description: 'Segunda proposta disponível para apresentação ao cliente.',
+                description: function(ticketData) {
+                    // Verificar se é Fluxo 2 (acima de R$2M) para alterar descrição
+                    if (!ticketData) return 'Segunda proposta disponível para apresentação ao cliente.';
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+                    const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+                    
+                    if (isFluxo2) {
+                        return 'Proposta Comitê Investidor disponível para apresentação ao cliente.';
+                    }
+                    return 'Segunda proposta disponível para apresentação ao cliente.';
+                },
                 actionButton: `
                     <button onclick="window.negocioDetalheModule.openResultadoSegundaPropostaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
                         </svg>
                         Informar Resultado da Segunda Proposta
+                    </button>
+                `
+            },
+            'Proposta Comitê Investidor': {
+                description: 'Proposta Comitê Investidor disponível para apresentação ao cliente.',
+                actionButton: `
+                    <button onclick="window.negocioDetalheModule.openResultadoSegundaPropostaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+                        </svg>
+                        Informar Resultado da Proposta
                     </button>
                 `
             },
@@ -1499,7 +1529,7 @@
         '1186972699',
         '1062003578',
         '1208748705',
-        '1208748705',
+        '1208820114', // Proposta Comitê Investidor / Segunda proposta cliente
         '1095528866',
         '1095528867',
         '1095528868',
@@ -1514,6 +1544,13 @@
       // Encontrar índice da etapa atual e da etapa de proposta disponível
       const currentIndex = stageOrder.indexOf(currentStageId);
       const propostaIndex = stageOrder.indexOf(propostaDisponivelId);
+      
+      // ID da etapa "Proposta Comitê Investidor" / "Segunda proposta cliente"
+      const propostaComiteInvestidorId = '1208820114';
+      const propostaComiteInvestidorIndex = stageOrder.indexOf(propostaComiteInvestidorId);
+      
+      // Verificar se já chegou ou passou pela etapa "Proposta Comitê Investidor"
+      const hasReachedPropostaComiteInvestidor = currentIndex !== -1 && propostaComiteInvestidorIndex !== -1 && currentIndex >= propostaComiteInvestidorIndex;
 
       // console.log('currentStageId', currentStageId)
       // console.log('currentIndex', currentIndex)
@@ -1598,7 +1635,7 @@
               </div>
               ` : ''}
 
-              ${shouldHideComiteInternoValues && !shouldShowFluxo2Content ? '' : `
+              ${(shouldHideComiteInternoValues && !shouldShowFluxo2Content) || !hasReachedPropostaComiteInvestidor ? '' : `
               <h2 class="text-lg font-semibold text-slate-900 mb-4 mt-8">Resumo da Aprovação pós comitê investidor</h2>
 
               <!-- Valores Aprovados -->
@@ -1653,7 +1690,7 @@
                   <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                       <div class="flex flex-col gap-3">
                           <div>
-                              <p class="text-sm font-medium text-orange-800">Proposta validada pelo comite investidor</p>
+                              <p class="text-sm font-medium text-orange-800">${isFluxo2 ? 'Proposta Comitê Investidor' : 'Proposta validada pelo comite investidor'}</p>
                               <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                           </div>
                           <button
@@ -4938,11 +4975,38 @@
     confirmarAgendamento2aReuniaoInicial: function() {
       var self = this;
       var titulo = '2ª Visita marcada';
-      var startTime = document.getElementById('reuniao2-start-time').value;
+      var startTimeElement = document.getElementById('reuniao2-start-time');
+      var startTime = startTimeElement ? startTimeElement.value.trim() : '';
       var body = document.getElementById('reuniao2-body').value.trim();
       var internalNotes = document.getElementById('reuniao2-body').value.trim();
 
-      if (!titulo || !startTime || !body) {
+      // Validação explícita e obrigatória de data/hora
+      if (!startTime) {
+        self.showToast('Por favor, preencha a data e hora da reunião. Este campo é obrigatório.', 'warning');
+        if (startTimeElement) {
+          startTimeElement.focus();
+          startTimeElement.style.borderColor = '#EF4444';
+          setTimeout(function() {
+            startTimeElement.style.borderColor = '#D1D5DB';
+          }, 3000);
+        }
+        return;
+      }
+
+      // Validar se a data/hora não está vazia após trim
+      if (startTime === '') {
+        self.showToast('Por favor, preencha a data e hora da reunião. Este campo é obrigatório.', 'warning');
+        return;
+      }
+
+      // Validar formato de data/hora
+      var dateTime = new Date(startTime);
+      if (isNaN(dateTime.getTime())) {
+        self.showToast('Por favor, insira uma data e hora válidas.', 'warning');
+        return;
+      }
+
+      if (!titulo || !body) {
         self.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
         return;
       }
@@ -4954,8 +5018,7 @@
         return;
       }
 
-      // Converter datetime-local para formato ISO com timezone
-      var dateTime = new Date(startTime);
+      // Converter datetime-local para formato ISO com timezone (dateTime já foi validado acima)
       var isoStartTime = dateTime.toISOString();
 
       // Preparar payload para API de meetings

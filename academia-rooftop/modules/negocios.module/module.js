@@ -65,6 +65,7 @@
       this.selectedStatuses = this.initSelectedStatuses();
       this.currentDateFilter = 'todas';
       this.currentPriorityFilter = 'todas';
+      this.currentNameFilter = '';
       this.statusDropdownOpen = false;
 
       // ✅ GARANTIR QUE O BOTÃO COMECE ESCONDIDO
@@ -278,6 +279,13 @@
     renderNegocios: function (negocios) {
       if (!this.contentEl) return;
 
+      // ✅ PRESERVAR FOCO NO CAMPO DE BUSCA SE ESTIVER ATIVO
+      var activeElement = document.activeElement;
+      var wasNameInputFocused = activeElement && activeElement.id === 'name-filter';
+      var nameInputValue = wasNameInputFocused ? activeElement.value : null;
+      var nameInputSelectionStart = wasNameInputFocused ? activeElement.selectionStart : null;
+      var nameInputSelectionEnd = wasNameInputFocused ? activeElement.selectionEnd : null;
+
       var html = this.generateNegociosHTML(negocios);
       this.contentEl.innerHTML = html;
       this.contentEl.style.display = 'block';
@@ -286,13 +294,31 @@
       this.showHeaderButton();
 
       this.addEventListeners();
+
+      // ✅ RESTAURAR FOCO NO CAMPO DE BUSCA SE ESTAVA ATIVO
+      if (wasNameInputFocused) {
+        var nameInput = document.getElementById('name-filter');
+        if (nameInput) {
+          // Restaurar valor (já deve estar no currentNameFilter, mas garantir)
+          if (nameInputValue !== null) {
+            nameInput.value = nameInputValue;
+          }
+          // Restaurar foco e posição do cursor
+          setTimeout(function() {
+            nameInput.focus();
+            if (nameInputSelectionStart !== null && nameInputSelectionEnd !== null) {
+              nameInput.setSelectionRange(nameInputSelectionStart, nameInputSelectionEnd);
+            }
+          }, 0);
+        }
+      }
     },
 
     generateNegociosHTML: function (negocios) {
       var self = this;
       var allStatuses = this.getAllFranquiaStatuses();
       var statusDisplayText = this.getStatusDisplayText();
-      console.log('negocios generateNegociosHTML', negocios)
+      // console.log('negocios generateNegociosHTML', negocios)
       // Garantir que selectedStatuses está inicializado
       if (!this.selectedStatuses) {
         this.selectedStatuses = this.initSelectedStatuses();
@@ -319,7 +345,7 @@
          <div class="space-y-6">
                                                <!-- Filtros -->
              <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                  
                  <!-- Filtro de Status (Multi-Select) -->
                  <div class="relative">
@@ -386,6 +412,18 @@
                      <option value="URGENT" ${this.currentPriorityFilter === 'URGENT' ? 'selected' : ''}>Urgente</option>
                    </select>
                  </div>
+
+                 <!-- Filtro de Busca por Nome -->
+                 <div>
+                   <label for="name-filter" class="block text-sm font-medium text-gray-700 mb-2">Buscar por nome</label>
+                   <input 
+                     type="text" 
+                     id="name-filter" 
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                     placeholder="Digite o nome do negócio..."
+                     value="${this.currentNameFilter || ''}"
+                   >
+                 </div>
                </div>
              </div>
 
@@ -430,8 +468,8 @@
           <div class="space-y-6">
             <!-- Skeleton Filtros -->
             <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                ${Array(3).fill(0).map(() => `
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                ${Array(4).fill(0).map(() => `
                   <div>
                     <div class="h-4 bg-gray-200 rounded animate-pulse mb-2 w-20"></div>
                     <div class="h-10 bg-gray-200 rounded-lg animate-pulse w-full"></div>
@@ -614,6 +652,15 @@
       // ✅ FILTRO POR PRIORIDADE  
       if (this.currentPriorityFilter && this.currentPriorityFilter !== 'todas') {
         filtered = filtered.filter(n => n.homecash_priority === this.currentPriorityFilter);
+      }
+
+      // ✅ FILTRO POR NOME
+      if (this.currentNameFilter && this.currentNameFilter.trim() !== '') {
+        var searchTerm = this.currentNameFilter.toLowerCase().trim();
+        filtered = filtered.filter(function(n) {
+          var nome = (n.dealname || n.name || '').toLowerCase();
+          return nome.indexOf(searchTerm) !== -1;
+        });
       }
 
       // ✅ ORDENAÇÃO PADRÃO: DIAS NA ESTEIRA (MAIOR → MENOR)
@@ -985,6 +1032,13 @@
       this.reloadTable();
     },
 
+    // ✅ FILTRO POR NOME (nova função para input)
+    filterByNameInput: function (nameFilter) {
+      this.currentNameFilter = nameFilter;
+      // console.log('🔍 Filtro Nome alterado para:', nameFilter);
+      this.reloadTable();
+    },
+
     // ✅ RECARREGAR TABELA (sem skeleton, apenas atualizar conteúdo)
     reloadTable: function () {
       // Se temos dados em cache, apenas re-renderizar
@@ -1075,6 +1129,14 @@
       if (prioritySelect) {
         prioritySelect.addEventListener('change', function () {
           self.filterByPrioritySelect(this.value);
+        });
+      }
+
+      // ✅ EVENT LISTENER PARA O CAMPO DE BUSCA POR NOME
+      var nameInput = document.getElementById('name-filter');
+      if (nameInput) {
+        nameInput.addEventListener('input', function () {
+          self.filterByNameInput(this.value);
         });
       }
     },

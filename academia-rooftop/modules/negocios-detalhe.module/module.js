@@ -226,15 +226,13 @@
         const ticketStatus = this.getTicketStatusInfo(ticketPortal ? ticketPortal.hs_pipeline_stage : null);
         const proponentes = this.getProponentesInfo(ticket);
         this.isDocumentosComplementaresCreated = true;
+        console.log('Prioridade carregada', ticket.hs_ticket_priority)
         return `
             <!-- Cabeçalho da Página -->
             <header class="mb-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <button onclick="window.history.back()" class="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors font-semibold">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                            Voltar
-                        </button>
+                        
                         <h1 class="text-3xl font-bold text-slate-900 mt-2">${negocio.dealname || 'Detalhes do Negócio'}</h1>
                         <div class="flex items-center gap-2 mt-2">
                             <div
@@ -1323,6 +1321,8 @@
                     <div><p class="text-sm font-medium text-slate-500">Prioridade</p><span class="badge ${priorityInfo.colorClass} mt-1" data-field="hs_ticket_priority">${priorityInfo.icon} ${priorityInfo.label}</span></div>
                     <div><p class="text-sm font-medium text-slate-500">História do cliente</p><p class="text-base text-slate-700 mt-1 bg-slate-50 p-3 rounded-lg border border-slate-200" data-field="historia_do_cliente">${negocio.historia_do_cliente || 'Sem histórico'}</p></div>
                     <div><p class="text-sm font-medium text-slate-500">Principal objetivo</p><p class="text-base text-slate-700 mt-1" data-field="qual_o_seu_principal_objetivo_">${objetivoLabel}</p></div>
+                    <div><p class="text-sm font-medium text-slate-500">Objetivo secundário</p><p class="text-base text-slate-700 mt-1">${negocio.objetivo_secundario || 'Não informado'}</p></div>
+                    <div><p class="text-sm font-medium text-slate-500">Solução procurada</p><p class="text-base text-slate-700 mt-1">${negocio.solucao_procurada || 'Não informado'}</p></div>
                 </div>
                 <div class="edit-mode hidden space-y-4">
                     <div>
@@ -7143,6 +7143,7 @@
    * @param {string} priority - Prioridade do ticket (LOW, MEDIUM, HIGH, URGENT)
    */
   getPriorityBadgeHTML: function(priority) {
+    console.log('Prioridade', priority)
     var priorityMap = {
       'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
       'MEDIUM': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },

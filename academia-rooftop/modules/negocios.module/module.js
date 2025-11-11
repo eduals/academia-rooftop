@@ -292,7 +292,7 @@
       var self = this;
       var allStatuses = this.getAllFranquiaStatuses();
       var statusDisplayText = this.getStatusDisplayText();
-      
+      console.log('negocios generateNegociosHTML', negocios)
       // Garantir que selectedStatuses está inicializado
       if (!this.selectedStatuses) {
         this.selectedStatuses = this.initSelectedStatuses();
@@ -690,6 +690,9 @@
         
         '1186972699': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
         '1206453052': { label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+        '1204075783': { label: 'Comitê interno', color: 'bg-indigo-100 text-indigo-800' },
+        '1208748705': { label: 'Comitê investidor', color: 'bg-indigo-100 text-indigo-800' },
+        '1208820114': { label: 'Segunda proposta cliente', color: 'bg-orange-100 text-orange-800' },
 
         '1062003578': { label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
         '1095528865': { label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
@@ -722,6 +725,9 @@
         { code: '1062003577', label: 'Apresentação da proposta', color: 'bg-indigo-100 text-indigo-800' },
         { code: '1186972699', label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
         { code: '1206453052', label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+        { code: '1204075783', label: 'Comitê interno', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1208748705', label: 'Comitê investidor', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1208820114', label: 'Segunda proposta cliente', color: 'bg-orange-100 text-orange-800' },
         { code: '1062003578', label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
         { code: '1095528865', label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
         { code: '1095528866', label: 'Reajuste da proposta', color: 'bg-orange-100 text-orange-800' },

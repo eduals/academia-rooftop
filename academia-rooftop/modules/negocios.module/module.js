@@ -1898,7 +1898,7 @@
 
       // Enviar para endpoints N8N
       Promise.all([
-        // this.enviarParaN8N('updateTicket', updateData),
+        this.enviarParaN8N('updateTicket', updateData),
         this.enviarParaN8N('updateDeal', updateData)
       ])
         .then(function (responses) {

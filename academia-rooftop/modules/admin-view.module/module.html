@@ -1,5 +1,29 @@
 
 
+{% set view_contact_id = request.query_dict.view_contact_id %}
+{% if view_contact_id %}
+  {% set contact_id = view_contact_id %}
+{% elif request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid %}
+{% else %}
+  {% set contact_id = null %}
+{% endif %}
+
+
+{# Carrega os dados do contato/franqueado #}
+{% if contact_id %}
+  {% set contato = crm_object("contact", contact_id, "endereco_de_entrega_do_material_impresso, cnpj_do_franqueado,firstname,lastname,email,phone,foto_de_perfil,hs_object_id,createdate,lastmodifieddate, admin_do_portal") %}
+{% else %}
+  {% set contato = null %}
+{% endif %}
+
+{% set isAdmin = (contato.admin_do_portal == 'Sim') %}
+
+<script>
+  // Expõe isAdmin para o JavaScript
+  window.isAdmin = {{ isAdmin|tojson }};
+</script>
+
 {# Página de Listagem de Franqueados - Portal Administrativo Rooftop #}
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -92,6 +116,16 @@
         <svg class="h-16 w-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         <h3 class="mb-2 text-xl font-semibold text-slate-900">Nenhum franqueado encontrado</h3>
         <p class="mb-6 text-slate-500 max-w-sm">Não há franqueados cadastrados no momento.</p>
+      </div>
+    </div>
+
+    <!-- Not Admin State -->
+    <div class="franqueados-not-admin" style="display: none;">
+      <div class="flex flex-col items-center justify-center py-16 text-center">
+        <svg class="h-16 w-16 text-amber-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <h3 class="mb-2 text-xl font-semibold text-slate-900">Acesso Restrito</h3>
+        <p class="mb-6 text-slate-500 max-w-sm">Você não possui permissão de administrador para acessar esta página.</p>
+        <p class="mb-6 text-slate-600 max-w-sm">Para solicitar acesso administrativo, entre em contato com <a href="mailto:dev@rooftop.com.br" class="text-blue-600 hover:text-blue-800 font-semibold">dev@rooftop.com.br</a>.</p>
       </div>
     </div>
   </section>

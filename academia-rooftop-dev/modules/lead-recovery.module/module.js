@@ -81,26 +81,19 @@
       // Buscar dados via API
       this.fetchLeadsFromAPI(listId)
         .then(function(response) {
-          console.log('✅ Response da API:', response);
-
           // Verificar se é array direto ou objeto com data
           var dataArray = null;
 
           if (Array.isArray(response)) {
             // Array direto: [{...}, {...}]
-            console.log('📦 Response é array direto');
             dataArray = response;
           } else if (response && response.data && Array.isArray(response.data)) {
             // Objeto com data: { data: [...] }
-            console.log('📦 Response tem propriedade data');
             dataArray = response.data;
           }
 
-          console.log('📦 dataArray:', dataArray);
-
           if (dataArray && dataArray.length > 0) {
             var contacts = self.extractContacts(dataArray);
-            console.log('📋 Contatos extraídos:', contacts);
 
             if (contacts.length > 0) {
               self.handleLeadsResponse(contacts);
@@ -108,7 +101,6 @@
               self.showNoData();
             }
           } else {
-            console.warn('⚠️ Nenhum dado encontrado');
             self.showNoData();
           }
         })
@@ -121,19 +113,28 @@
     // Extrair contatos do payload retornado
     extractContacts: function(contactsArray) {
       var contacts = [];
+      var skippedItems = [];
 
-      console.log('🔍 extractContacts - Total de items:', contactsArray.length);
-
-      // O payload vem como array de objetos: [{dealId, contactVid, contactInfo, dealInfo, isMQL, ...}, ...]
+      // O payload vem como array de objetos: [{dealId, contactVid, contactInfo, dealInfo, dealProperties, isMQL, ...}, ...]
       contactsArray.forEach(function(item, index) {
-        console.log('🔍 Item ' + index + ':', item);
-        console.log('🔍 dealId:', item.dealId);
-        console.log('🔍 contactVid:', item.contactVid);
-        console.log('🔍 contactInfo:', item.contactInfo);
-        console.log('🔍 dealInfo:', item.dealInfo);
-        console.log('🔍 isMQL:', item.isMQL || item.ismql);
+        // Log para debug - ver estrutura do item
+        if (index === 0) {
+          console.log('🕐 Primeiro item do payload:', item);
+          console.log('🕐 dealInfo:', item.dealInfo);
+          console.log('🕐 dealProperties:', item.dealProperties);
+        }
+        
+        // Validação detalhada
+        var hasContactInfo = item.contactInfo !== null && item.contactInfo !== undefined;
+        // Priorizar dealProperties (tem mais campos) sobre dealInfo
+        var dealData = item.dealProperties || item.dealInfo;
+        var hasDealInfo = dealData !== null && dealData !== undefined;
+        var contactInfoType = typeof item.contactInfo;
+        var dealInfoType = typeof dealData;
+        var contactInfoIsObject = hasContactInfo && typeof item.contactInfo === 'object' && !Array.isArray(item.contactInfo);
+        var dealInfoIsObject = hasDealInfo && typeof dealData === 'object' && !Array.isArray(dealData);
 
-        if (item.contactInfo && item.dealInfo) {
+        if (item.contactInfo && dealData) {
           var extractedContact = {
             // IDs
             dealId: item.dealId,
@@ -146,9 +147,9 @@
             firstname: item.contactInfo.firstname || '',
             lastname: item.contactInfo.lastname || '',
             nomeCompleto: item.contactInfo.nomeCompleto || '',
-            // Datas do DEAL (não do contato)
-            createdate: item.dealInfo.dataCriacao || '',
-            lastmodifieddate: item.dealInfo.lastmodifieddate || '',
+            // Datas do DEAL (não do contato) - usar dealData que pode ser dealInfo ou dealProperties
+            createdate: dealData.dataCriacao || dealData.createdate || '',
+            lastmodifieddate: dealData.lastmodifieddate || dealData.hs_lastmodifieddate || '',
             // Endereço
             address: item.contactInfo.address || '',
             city: item.contactInfo.city || '',
@@ -161,17 +162,50 @@
             // Objetivos
             objetivo_principal: item.contactInfo.objetivo_principal || '',
             objetivo_secundario: item.contactInfo.objetivo_secundario || '',
-            solucao_procurada: item.contactInfo.solucao_procurada || ''
+            solucao_procurada: item.contactInfo.solucao_procurada || '',
+            // Lead Portal Franqueado - usar dealData que pode ser dealInfo ou dealProperties
+            lead_portal_franqueado: dealData.lead_portal_franqueado || '',
+            lead_portal_franqueado___tipo: dealData.lead_portal_franqueado___tipo || 'Bônus',
+            lead_portal_franqueado_a_partir: dealData.lead_portal_franqueado_a_partir || '',
+            lead_portal_franqueado_ate: dealData.lead_portal_franqueado_ate || ''
           };
 
-          console.log('✅ Contato extraído:', extractedContact);
+          // Log para debug - verificar se o campo foi extraído
+          if (index === 0) {
+            console.log('🕐 Contato extraído (primeiro):', extractedContact);
+            console.log('🕐 lead_portal_franqueado_ate extraído:', extractedContact.lead_portal_franqueado_ate);
+            console.log('🕐 dealData usado:', dealData);
+            console.log('🕐 dealData.lead_portal_franqueado_ate:', dealData.lead_portal_franqueado_ate);
+          }
+
           contacts.push(extractedContact);
         } else {
-          console.warn('⚠️ Item ' + index + ' não possui contactInfo ou dealInfo');
+          var reason = [];
+          if (!hasContactInfo) {
+            reason.push('contactInfo é null/undefined');
+          } else if (!contactInfoIsObject) {
+            reason.push('contactInfo não é objeto válido (tipo: ' + contactInfoType + ')');
+          }
+          if (!hasDealInfo) {
+            reason.push('dealInfo/dealProperties é null/undefined');
+          } else if (!dealInfoIsObject) {
+            reason.push('dealInfo/dealProperties não é objeto válido (tipo: ' + dealInfoType + ')');
+          }
+
+          var skippedItem = {
+            index: index,
+            dealId: item.dealId,
+            contactVid: item.contactVid,
+            reason: reason.join(' | '),
+            contactInfo: item.contactInfo,
+            dealInfo: item.dealInfo,
+            dealProperties: item.dealProperties
+          };
+
+          skippedItems.push(skippedItem);
         }
       });
 
-      console.log('📊 Total de contatos extraídos:', contacts.length);
       return contacts;
     },
 
@@ -208,17 +242,14 @@
     renderLeads: function (contacts) {
       if (!this.contentEl) return;
 
-      // Separar leads MQL e leads normais
+      // Separar leads por tipo (Mais Quentes ou Bônus)
       var leadsMQL = contacts.filter(function(contact) {
-        return contact.isMQL === true;
+        return contact.lead_portal_franqueado___tipo === 'Mais Quentes';
       });
 
       var leadsNormais = contacts.filter(function(contact) {
-        return contact.isMQL !== true;
+        return contact.lead_portal_franqueado___tipo !== 'Mais Quentes';
       });
-
-      console.log('📊 Leads MQL:', leadsMQL.length);
-      console.log('📊 Leads Normais:', leadsNormais.length);
 
       var html = '<div class="space-y-6">';
 
@@ -253,10 +284,79 @@
 
       this.contentEl.innerHTML = html;
       this.contentEl.style.display = 'block';
+
+      // Iniciar atualização de countdown em tempo real
+      this.startCountdownUpdates();
+    },
+
+    /**
+     * Iniciar atualização automática dos countdowns
+     */
+    startCountdownUpdates: function () {
+      var self = this;
+      
+      // Limpar intervalo anterior se existir
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+
+      // Atualizar imediatamente
+      this.updateAllCountdowns();
+
+      // Atualizar a cada minuto
+      this.countdownInterval = setInterval(function () {
+        self.updateAllCountdowns();
+      }, 60000); // 60 segundos
+    },
+
+    /**
+     * Atualizar todos os countdowns na página
+     */
+    updateAllCountdowns: function () {
+      var self = this;
+      var countdownElements = document.querySelectorAll('[id^="countdown-"]');
+
+      countdownElements.forEach(function (element) {
+        var timestamp = element.getAttribute('data-timestamp');
+        if (!timestamp) return;
+
+        var countdown = self.calculateCountdown(timestamp);
+        var countdownText = self.formatCountdown(countdown);
+        
+        // Atualizar texto
+        element.textContent = countdownText;
+        
+        // Atualizar classe de cor
+        if (countdown) {
+          if (countdown.days === 0 && countdown.hours < 24) {
+            element.className = element.className.replace(/text-\w+-\d+/g, '') + ' text-red-600 font-semibold';
+          } else {
+            element.className = element.className.replace(/text-\w+-\d+/g, '').replace(/font-semibold/g, '') + ' text-gray-700';
+          }
+        } else {
+          element.className = element.className.replace(/text-\w+-\d+/g, '').replace(/font-semibold/g, '') + ' text-gray-400';
+        }
+      });
     },
 
     generateTableHTML: function (contacts) {
       var self = this;
+      var renderedRows = [];
+      var failedRows = [];
+      
+      contacts.forEach(function(contact, index) {
+        try {
+          var rowHTML = self.generateLeadRow(contact);
+          if (rowHTML && rowHTML.trim() !== '') {
+            renderedRows.push(rowHTML);
+          } else {
+            failedRows.push({ index: index, contact: contact, reason: 'Linha vazia' });
+          }
+        } catch (error) {
+          failedRows.push({ index: index, contact: contact, reason: error.message, error: error });
+        }
+      });
+      
       return `
         <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           <div class="overflow-x-auto">
@@ -278,13 +378,16 @@
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 140px;">
                     Última Atualização
                   </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 150px;">
+                    Tempo Restante
+                  </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px;">
                     Ações
                   </th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                ${contacts.map(function(contact) { return self.generateLeadRow(contact); }).join('')}
+                ${renderedRows.join('')}
               </tbody>
             </table>
           </div>
@@ -307,6 +410,7 @@
                      <th class="px-6 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse"></div></th>
                      <th class="px-6 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse"></div></th>
                      <th class="px-6 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse"></div></th>
+                     <th class="px-6 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse"></div></th>
                    </tr>
                  </thead>
                  <tbody class="bg-white divide-y divide-gray-200">
@@ -317,6 +421,7 @@
                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded animate-pulse w-28"></div></td>
                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                       <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div></td>
                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div></td>
                      </tr>
                    `; }).join('')}
@@ -329,120 +434,226 @@
     },
 
     generateLeadRow: function (contact) {
-      var nome = (contact.firstname + ' ' + contact.lastname).trim() || 'Sem nome';
-      var email = contact.email || 'Sem email';
-      var phone = contact.phone || 'Sem telefone';
-      var dataCriacao = contact.createdate ? this.formatDate(contact.createdate) : '-';
-      var dataAtualizacao = contact.lastmodifieddate ? this.formatDate(contact.lastmodifieddate) : '-';
+      try {
+        var nome = (contact.firstname + ' ' + contact.lastname).trim() || 'Sem nome';
+        var email = contact.email || 'Sem email';
+        var phone = contact.phone || 'Sem telefone';
+        var dataCriacao = contact.createdate ? this.formatDate(contact.createdate) : '-';
+        var dataAtualizacao = contact.lastmodifieddate ? this.formatDate(contact.lastmodifieddate) : '-';
 
-      // Cidade e Estado
-      var cidade = contact.city || '';
-      var estado = contact.state || '';
-      var localizacao = (cidade && estado) ? cidade + ', ' + estado : (cidade || estado || '');
+        // Cidade e Estado
+        var cidade = contact.city || '';
+        var estado = contact.state || '';
+        var localizacao = (cidade && estado) ? cidade + ', ' + estado : (cidade || estado || '');
 
-      // Endereço completo para Google Maps
-      var enderecoCompleto = '';
-      if (contact.address) enderecoCompleto += contact.address + ', ';
-      if (contact.city) enderecoCompleto += contact.city + ', ';
-      if (contact.state) enderecoCompleto += contact.state + ', ';
-      if (contact.zip) enderecoCompleto += contact.zip;
-      enderecoCompleto = enderecoCompleto.trim().replace(/,\s*$/, ''); // Remove vírgula final
-      var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(enderecoCompleto);
+        // Endereço completo para Google Maps
+        var enderecoCompleto = '';
+        if (contact.address) enderecoCompleto += contact.address + ', ';
+        if (contact.city) enderecoCompleto += contact.city + ', ';
+        if (contact.state) enderecoCompleto += contact.state + ', ';
+        if (contact.zip) enderecoCompleto += contact.zip;
+        enderecoCompleto = enderecoCompleto.trim().replace(/,\s*$/, ''); // Remove vírgula final
+        var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(enderecoCompleto);
 
-      // Verificar se é MQL (lead quente)
-      var isMQL = contact.isMQL === true;
+        // Verificar se é Mais Quentes
+        var isMaisQuentes = contact.lead_portal_franqueado___tipo === 'Mais Quentes';
 
-      // Serializar dados do contato para passar ao modal
-      var contactDataJSON = JSON.stringify(contact).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        // Serializar dados do contato para passar ao modal - com tratamento de erros
+        var contactDataJSON;
+        try {
+          contactDataJSON = JSON.stringify(contact).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        } catch (e) {
+          console.error('❌ Erro ao serializar contato para JSON:', contact, e);
+          contactDataJSON = '{}';
+        }
 
-      return `
-        <tr class="hover:bg-gray-50" id="lead-row-${contact.vid}">
-          <td class="px-6 py-4" style="max-width: 280px;">
-            <div class="flex items-center gap-1.5">
-              <span class="text-sm font-medium text-gray-900">${nome}</span>
-              ${isMQL ? `
-                <span title="Lead MQL: Marketing Qualified Lead - Alta prioridade" class="inline-flex">
-                  <svg class="w-4 h-4 text-orange-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"></path>
-                  </svg>
-                </span>
-              ` : ''}
-            </div>
-            ${localizacao ? `
-              <div class="flex items-center gap-1 mt-1">
-                <span class="text-xs text-gray-400">${localizacao}</span>
-                ${enderecoCompleto ? `
-                  <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" title="Ver no Google Maps" class="text-gray-400 hover:text-blue-600 transition-colors">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        // Escapar caracteres especiais no nome para evitar quebra de HTML
+        var nomeEscapado = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // Calcular countdown
+        console.log('🕐 Antes de calcular countdown - contact.lead_portal_franqueado_ate:', contact.lead_portal_franqueado_ate);
+        var countdown = this.calculateCountdown(contact.lead_portal_franqueado_ate);
+        console.log('🕐 Após calcular countdown - resultado:', countdown);
+        var countdownText = this.formatCountdown(countdown);
+        var countdownClass = countdown ? (countdown.days === 0 && countdown.hours < 24 ? 'text-red-600 font-semibold' : 'text-gray-700') : 'text-gray-400';
+
+        return `
+          <tr class="hover:bg-gray-50" id="lead-row-${contact.vid}">
+            <td class="px-6 py-4" style="max-width: 280px;">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-medium text-gray-900">${nomeEscapado}</span>
+                ${isMaisQuentes ? `
+                  <span title="Lead Mais Quentes: Alta prioridade" class="inline-flex">
+                    <svg class="w-4 h-4 text-orange-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"></path>
                     </svg>
-                  </a>
+                  </span>
                 ` : ''}
               </div>
-            ` : ''}
-          </td>
-          <td class="px-6 py-4">
-            <div class="text-sm text-gray-500 blur-md select-none transition-all" id="email-${contact.vid}" data-email="${email}" title="Clique em Acelerar para ver o email completo">
-              ${email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}
-            </div>
-          </td>
-          <td class="px-6 py-4">
-            <div class="text-sm text-gray-500 blur-md select-none transition-all" id="phone-${contact.vid}" data-phone="${phone}" title="Clique em Acelerar para ver o telefone completo">
-              ${phone.length > 4 ? '(***) ****-' + phone.substring(phone.length - 4) : '****'}
-            </div>
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            ${dataCriacao}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            ${dataAtualizacao}
-          </td>
-          <td class="px-4 py-4 text-sm font-medium">
-            <div class="flex gap-2">
-              <!-- Botão Visualizar -->
-              <button
-                onclick='window.leadRecoveryModule.visualizarLead(${contactDataJSON})'
-                class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                title="Visualizar detalhes do lead"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-                Visualizar
-              </button>
-              
+              ${localizacao ? `
+                <div class="flex items-center gap-1 mt-1">
+                  <span class="text-xs text-gray-400">${localizacao}</span>
+                  ${enderecoCompleto ? `
+                    <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" title="Ver no Google Maps" class="text-gray-400 hover:text-blue-600 transition-colors">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                    </a>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-gray-500 blur-md select-none transition-all" id="email-${contact.vid}" data-email="${email}" title="Clique em Acelerar para ver o email completo">
+                ${email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-gray-500 blur-md select-none transition-all" id="phone-${contact.vid}" data-phone="${phone}" title="Clique em Acelerar para ver o telefone completo">
+                ${phone.length > 4 ? '(***) ****-' + phone.substring(phone.length - 4) : '****'}
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              ${dataCriacao}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              ${dataAtualizacao}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm ${countdownClass}" id="countdown-${contact.vid}" data-timestamp="${contact.lead_portal_franqueado_ate || ''}">
+              ${countdownText}
+            </td>
+            <td class="px-4 py-4 text-sm font-medium">
+              <div class="flex gap-2">
+                <!-- Botão Visualizar -->
+                <button
+                  onclick='window.leadRecoveryModule.visualizarLead(${contactDataJSON})'
+                  class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  title="Visualizar detalhes do lead"
+                >
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  Visualizar
+                </button>
+                
 
-              <!-- Botão Acelerar -->
-              <button
-                onclick="window.leadRecoveryModule.acelerarLead('${contact.dealId}', '${contact.vid}', '${nome.replace(/'/g, "\\'")}')"
-                class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                title="Acelerar lead e desbloquear dados"
-                id="btn-accelerate-${contact.vid}"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-                Acelerar
-              </button>
+                <!-- Botão Acelerar -->
+                <button
+                  onclick="window.leadRecoveryModule.acelerarLead('${contact.dealId}', '${contact.vid}', '${nomeEscapado.replace(/'/g, "\\'")}')"
+                  class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                  title="Acelerar lead e desbloquear dados"
+                  id="btn-accelerate-${contact.vid}"
+                >
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+                  Acelerar
+                </button>
 
-              <!-- Botão Descartar 
-              <button
-                onclick="window.leadRecoveryModule.descartarLead('${contact.dealId}', '${contact.vid}', '${nome.replace(/'/g, "\\'")}')"
-                class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-                title="Descartar este lead"
-                id="btn-discard-${contact.vid}"
-              >
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Descartar
-              </button>-->
-            </div>
-          </td>
-        </tr>
-      `;
+                <!-- Botão Descartar 
+                <button
+                  onclick="window.leadRecoveryModule.descartarLead('${contact.dealId}', '${contact.vid}', '${nomeEscapado.replace(/'/g, "\\'")}')"
+                  class="cursor-pointer inline-flex items-center px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                  title="Descartar este lead"
+                  id="btn-discard-${contact.vid}"
+                >
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Descartar
+                </button>-->
+              </div>
+            </td>
+          </tr>
+        `;
+      } catch (error) {
+        // Retornar uma linha de erro para não quebrar a tabela
+        return `
+          <tr class="bg-red-50">
+            <td colspan="7" class="px-6 py-4 text-sm text-red-600">
+              Erro ao renderizar lead (dealId: ${contact.dealId || 'N/A'}, vid: ${contact.vid || 'N/A'})
+            </td>
+          </tr>
+        `;
+      }
+    },
+
+    /**
+     * Calcular countdown baseado em timestamp
+     * Retorna objeto com dias, horas, minutos ou null se já expirou
+     */
+    calculateCountdown: function (timestampString) {
+      console.log('🕐 calculateCountdown chamado com:', timestampString);
+      
+      if (!timestampString) {
+        console.log('🕐 timestampString vazio, retornando null');
+        return null;
+      }
+
+      try {
+        var timestamp = parseInt(timestampString);
+        if (isNaN(timestamp)) {
+          console.log('🕐 timestamp inválido (NaN), retornando null');
+          return null;
+        }
+
+        // Verificar se o timestamp está em segundos (menor que 1 trilhão) ou milissegundos
+        // Timestamps em milissegundos são geralmente > 1 trilhão (ex: 1763147852000)
+        // Timestamps em segundos são geralmente < 1 trilhão (ex: 1763147852)
+        if (timestamp < 1000000000000) {
+          // Está em segundos, converter para milissegundos
+          timestamp = timestamp * 1000;
+        }
+
+        var now = new Date().getTime();
+        var targetDate = timestamp;
+        var diff = targetDate - now;
+
+        console.log('🕐 Countdown Debug:', {
+          timestampString: timestampString,
+          timestamp: timestamp,
+          now: now,
+          targetDate: targetDate,
+          diff: diff,
+          diffDays: diff / (1000 * 60 * 60 * 24)
+        });
+
+        // Se já passou, retornar null
+        if (diff <= 0) {
+          return null;
+        }
+
+        // Calcular dias, horas, minutos
+        var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        return {
+          days: days,
+          hours: hours,
+          minutes: minutes,
+          totalMs: diff
+        };
+      } catch (e) {
+        return null;
+      }
+    },
+
+    /**
+     * Formatar countdown para exibição
+     */
+    formatCountdown: function (countdown) {
+      if (!countdown) return 'Expirado';
+
+      if (countdown.days > 0) {
+        return countdown.days + ' dia' + (countdown.days > 1 ? 's' : '') + ', ' + countdown.hours + ' hora' + (countdown.hours !== 1 ? 's' : '');
+      } else if (countdown.hours > 0) {
+        return countdown.hours + ' hora' + (countdown.hours > 1 ? 's' : '') + ', ' + countdown.minutes + ' minuto' + (countdown.minutes !== 1 ? 's' : '');
+      } else {
+        return countdown.minutes + ' minuto' + (countdown.minutes !== 1 ? 's' : '');
+      }
     },
 
     formatDate: function (dateString) {
@@ -551,6 +762,14 @@
                 </button>
               </div>
 
+              <!-- Disclaimer -->
+              <div class="text-xs text-gray-400 italic mb-4 flex items-center gap-1">
+                <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                <span>As informações de contato completas são liberadas ao acelerar o lead. Após acelerar, todos os dados ficam disponíveis na aba de negócios.</span>
+              </div>
+
               <!-- Conteúdo -->
               <div class="space-y-4 max-h-96 overflow-y-auto">
                 <!-- Informações de Contato -->
@@ -559,11 +778,11 @@
                   <div class="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span class="text-gray-500">Email:</span>
-                      <p class="font-medium text-gray-900">${contact.email }</p>
+                      <p class="font-medium text-gray-900 blur-md select-none" data-email="${contact.email}" title="Clique em Acelerar para ver o email completo">${contact.email ? contact.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : '-'}</p>
                     </div>
                     <div>
                       <span class="text-gray-500">Telefone:</span>
-                      <p class="font-medium text-gray-900">${contact.phone }</p>
+                      <p class="font-medium text-gray-900 blur-md select-none" data-phone="${contact.phone}" title="Clique em Acelerar para ver o telefone completo">${contact.phone ? (contact.phone.length > 4 ? '(***) ****-' + contact.phone.substring(contact.phone.length - 4) : '****') : '-'}</p>
                     </div>
                   </div>
                 </div>

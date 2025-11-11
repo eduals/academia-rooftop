@@ -4,8 +4,11 @@
 
   var module = {
     init: function() {
-      document.getElementById('header').style.display = 'none';
-      document.getElementById('header').classList.add('hidden');
+      var headerEl = document.getElementById('header');
+      if (headerEl) {
+        headerEl.style.display = 'none';
+        headerEl.classList.add('hidden');
+      }
       this.container = document.querySelector('[data-module="franqueadosListModule"]');
       if (!this.container) return;
 
@@ -13,7 +16,16 @@
       this.contentEl = this.container.querySelector('.franqueados-content');
       this.errorEl = this.container.querySelector('.franqueados-error');
       this.emptyEl = this.container.querySelector('.franqueados-empty');
+      this.notAdminEl = this.container.querySelector('.franqueados-not-admin');
       this.tableBody = this.container.querySelector('.franqueados-table-body');
+
+      // Verifica se o usuário é admin
+      var isAdmin = window.isAdmin === true || window.isAdmin === 'true';
+      
+      if (!isAdmin) {
+        this.showNotAdmin();
+        return;
+      }
 
       this.loadFranqueados();
     },
@@ -172,6 +184,12 @@
       if (this.contentEl) this.contentEl.style.display = 'none';
       if (this.errorEl) this.errorEl.style.display = 'none';
       if (this.emptyEl) this.emptyEl.style.display = 'none';
+      if (this.notAdminEl) this.notAdminEl.style.display = 'none';
+    },
+
+    showNotAdmin: function() {
+      this.hideAllSections();
+      if (this.notAdminEl) this.notAdminEl.style.display = 'block';
     },
 
     showError: function() {

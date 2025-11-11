@@ -61,9 +61,16 @@
       this.contentEl = this.container.querySelector('.negocios-content');
       this.errorEl = this.container.querySelector('.negocios-error');
 
-      this.currentFilter = 'todos';
+      // ✅ FILTRO MULTI-SELECT: Inicializar com todos os status exceto Perdido e Descartado
+      this.selectedStatuses = this.initSelectedStatuses();
       this.currentDateFilter = 'todas';
       this.currentPriorityFilter = 'todas';
+      this.currentNameFilter = '';
+      this.statusDropdownOpen = false;
+      
+      // ✅ ORDENAÇÃO: Estado inicial (padrão: dias na esteira descendente)
+      this.currentSortColumn = 'dias_esteira';
+      this.currentSortDirection = 'desc';
 
       // ✅ GARANTIR QUE O BOTÃO COMECE ESCONDIDO
       this.hideHeaderButton();
@@ -256,6 +263,9 @@
       // console.log('negocios handleNegociosResponse', negocios);
       this.hideAllSections();
 
+      // ✅ ARMAZENAR DADOS DOS NEGÓCIOS PARA RE-RENDERIZAÇÃO
+      this.cachedNegocios = negocios;
+
       // ✅ VERIFICAR SE HÁ DADOS REAIS ANTES DE MOSTRAR EMPTY STATE
       // console.log('🔍 Verificando dados recebidos:', {
       //   negocios: negocios,
@@ -273,6 +283,13 @@
     renderNegocios: function (negocios) {
       if (!this.contentEl) return;
 
+      // ✅ PRESERVAR FOCO NO CAMPO DE BUSCA SE ESTIVER ATIVO
+      var activeElement = document.activeElement;
+      var wasNameInputFocused = activeElement && activeElement.id === 'name-filter';
+      var nameInputValue = wasNameInputFocused ? activeElement.value : null;
+      var nameInputSelectionStart = wasNameInputFocused ? activeElement.selectionStart : null;
+      var nameInputSelectionEnd = wasNameInputFocused ? activeElement.selectionEnd : null;
+
       var html = this.generateNegociosHTML(negocios);
       this.contentEl.innerHTML = html;
       this.contentEl.style.display = 'block';
@@ -281,24 +298,99 @@
       this.showHeaderButton();
 
       this.addEventListeners();
+
+      // ✅ RESTAURAR FOCO NO CAMPO DE BUSCA SE ESTAVA ATIVO
+      if (wasNameInputFocused) {
+        var nameInput = document.getElementById('name-filter');
+        if (nameInput) {
+          // Restaurar valor (já deve estar no currentNameFilter, mas garantir)
+          if (nameInputValue !== null) {
+            nameInput.value = nameInputValue;
+          }
+          // Restaurar foco e posição do cursor
+          setTimeout(function() {
+            nameInput.focus();
+            if (nameInputSelectionStart !== null && nameInputSelectionEnd !== null) {
+              nameInput.setSelectionRange(nameInputSelectionStart, nameInputSelectionEnd);
+            }
+          }, 0);
+        }
+      }
     },
 
     generateNegociosHTML: function (negocios) {
+      var self = this;
+      var allStatuses = this.getAllFranquiaStatuses();
+      var statusDisplayText = this.getStatusDisplayText();
+      // console.log('negocios generateNegociosHTML', negocios)
+      // Garantir que selectedStatuses está inicializado
+      if (!this.selectedStatuses) {
+        this.selectedStatuses = this.initSelectedStatuses();
+      }
+      
+      // Gerar HTML dos checkboxes de status
+      var statusCheckboxesHTML = allStatuses.map(function(status) {
+        var isChecked = self.selectedStatuses && self.selectedStatuses.indexOf(status.code) !== -1;
+        return `
+          <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input 
+              type="checkbox" 
+              value="${status.code}" 
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              ${isChecked ? 'checked' : ''}
+              data-status-code="${status.code}"
+            >
+            <span class="ml-3 text-sm text-gray-700">${status.label}</span>
+          </label>
+        `;
+      }).join('');
+
       return `
          <div class="space-y-6">
                                                <!-- Filtros -->
              <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                  
-                 <!-- Filtro de Status -->
-                 <div>
-                   <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                   <select id="status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 cursor-pointer">
-                     <option value="todos" ${this.currentFilter === 'todos' ? 'selected' : ''}>Todos</option>
-                     <option value="abertos" ${this.currentFilter === 'abertos' ? 'selected' : ''}>Abertos</option>
-                     <option value="ganhos" ${this.currentFilter === 'ganhos' ? 'selected' : ''}>Ganhos</option>
-                     <option value="perdidos" ${this.currentFilter === 'perdidos' ? 'selected' : ''}>Perdidos</option>
-                   </select>
+                 <!-- Filtro de Status (Multi-Select) -->
+                 <div class="relative">
+                   <label for="status-filter-btn" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                   <button 
+                     id="status-filter-btn" 
+                     type="button"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 cursor-pointer text-left flex items-center justify-between"
+                     onclick="window.negociosModule.toggleStatusDropdown()"
+                   >
+                     <span id="status-filter-text" class="truncate">${statusDisplayText}</span>
+                     <svg class="w-5 h-5 text-gray-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                     </svg>
+                   </button>
+                   <div 
+                     id="status-filter-dropdown" 
+                     class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                   >
+                     <!-- Botões de ação rápida -->
+                     <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-3 py-2 flex gap-2 z-10">
+                       <button 
+                         type="button"
+                         onclick="window.negociosModule.selectAllStatuses()"
+                         class="flex-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                       >
+                         Selecionar todos
+                       </button>
+                       <button 
+                         type="button"
+                         onclick="window.negociosModule.deselectAllStatuses()"
+                         class="flex-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                       >
+                         Deselecionar todos
+                       </button>
+                     </div>
+                     <!-- Lista de checkboxes -->
+                     <div class="max-h-56 overflow-y-auto">
+                       ${statusCheckboxesHTML}
+                     </div>
+                   </div>
                  </div>
 
                  <!-- Filtro de Data -->
@@ -324,6 +416,18 @@
                      <option value="URGENT" ${this.currentPriorityFilter === 'URGENT' ? 'selected' : ''}>Urgente</option>
                    </select>
                  </div>
+
+                 <!-- Filtro de Busca por Nome -->
+                 <div>
+                   <label for="name-filter" class="block text-sm font-medium text-gray-700 mb-2">Buscar por nome</label>
+                   <input 
+                     type="text" 
+                     id="name-filter" 
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                     placeholder="Digite o nome do negócio..."
+                     value="${this.currentNameFilter || ''}"
+                   >
+                 </div>
                </div>
              </div>
 
@@ -333,20 +437,55 @@
                <table class="min-w-full divide-y divide-gray-200">
                  <thead class="bg-gray-50">
                    <tr>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Negócio
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('nome')"
+                       data-sort-column="nome"
+                     >
+                       <span class="flex items-center">
+                         Negócio
+                         ${this.getSortIcon('nome')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Status
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('status')"
+                       data-sort-column="status"
+                     >
+                       <span class="flex items-center">
+                         Status
+                         ${this.getSortIcon('status')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Data de criação
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('data_criacao')"
+                       data-sort-column="data_criacao"
+                     >
+                       <span class="flex items-center">
+                         Data de criação
+                         ${this.getSortIcon('data_criacao')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Prioridade
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('prioridade')"
+                       data-sort-column="prioridade"
+                     >
+                       <span class="flex items-center">
+                         Prioridade
+                         ${this.getSortIcon('prioridade')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Dias na esteira
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('dias_esteira')"
+                       data-sort-column="dias_esteira"
+                     >
+                       <span class="flex items-center">
+                         Dias na esteira
+                         ${this.getSortIcon('dias_esteira')}
+                       </span>
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                        Ações
@@ -368,8 +507,8 @@
           <div class="space-y-6">
             <!-- Skeleton Filtros -->
             <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                ${Array(3).fill(0).map(() => `
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                ${Array(4).fill(0).map(() => `
                   <div>
                     <div class="h-4 bg-gray-200 rounded animate-pulse mb-2 w-20"></div>
                     <div class="h-10 bg-gray-200 rounded-lg animate-pulse w-full"></div>
@@ -533,35 +672,16 @@
 
     getFilteredNegocios: function (negocios) {
       var filtered = negocios;
+      var self = this;
 
-      // ✅ FILTRO POR STATUS (usando códigos da franquia)
-      switch (this.currentFilter) {
-        case 'abertos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Todos exceto ganhos e perdidos
-            return stage && !['1095528870', '1095528871', '1095528872', '1095528873'].includes(stage);
-          });
-          break;
-        case 'ganhos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Finalização do pagamento, Em locação
-            return stage && ['1095528870', '1095528871'].includes(stage);
-          });
-          break;
-        case 'perdidos':
-          filtered = filtered.filter(n => {
-            var stage = n.ticket_franquia_stage;
-            // Descartado, Perdido
-            return stage && ['1095528872', '1095528873'].includes(stage);
-          });
-          break;
-        // 'todos' e 'fechados' removidos conforme mapeamento
-        default:
-          // Todos os registros
-          break;
+      // ✅ FILTRO POR STATUS (multi-select)
+      if (this.selectedStatuses && this.selectedStatuses.length > 0) {
+        filtered = filtered.filter(function(n) {
+          var stage = n.ticket_franquia_stage;
+          return stage && self.selectedStatuses.indexOf(stage) !== -1;
+        });
       }
+      // Se nenhum status selecionado, mostrar todos (comportamento padrão)
 
       // ✅ FILTRO POR DATA
       if (this.currentDateFilter && this.currentDateFilter !== 'todas') {
@@ -573,12 +693,17 @@
         filtered = filtered.filter(n => n.homecash_priority === this.currentPriorityFilter);
       }
 
-      // ✅ ORDENAÇÃO PADRÃO: DIAS NA ESTEIRA (MAIOR → MENOR)
-      filtered.sort((a, b) => {
-        var diasA = this.getDiasNaEsteira(a.homecash_createdate).dias;
-        var diasB = this.getDiasNaEsteira(b.homecash_createdate).dias;
-        return diasB - diasA; // Maior para menor
-      });
+      // ✅ FILTRO POR NOME
+      if (this.currentNameFilter && this.currentNameFilter.trim() !== '') {
+        var searchTerm = this.currentNameFilter.toLowerCase().trim();
+        filtered = filtered.filter(function(n) {
+          var nome = (n.dealname || n.name || '').toLowerCase();
+          return nome.indexOf(searchTerm) !== -1;
+        });
+      }
+
+      // ✅ ORDENAÇÃO DINÂMICA
+      filtered = this.sortNegocios(filtered, this.currentSortColumn, this.currentSortDirection);
 
       return filtered;
     },
@@ -647,6 +772,9 @@
         
         '1186972699': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
         '1206453052': { label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+        '1204075783': { label: 'Comitê interno', color: 'bg-indigo-100 text-indigo-800' },
+        '1208748705': { label: 'Comitê investidor', color: 'bg-indigo-100 text-indigo-800' },
+        '1208820114': { label: 'Segunda proposta cliente', color: 'bg-orange-100 text-orange-800' },
 
         '1062003578': { label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
         '1095528865': { label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
@@ -661,6 +789,57 @@
       };
 
       return franquiaStatusMap[stage] || { label: 'Status não identificado', color: 'bg-gray-100 text-gray-800' };
+    },
+
+    /**
+     * Retorna array com todos os status na ordem do pipeline
+     * @returns {Array} Array de objetos {code, label, color}
+     */
+    getAllFranquiaStatuses: function () {
+      return [
+        { code: '1095534672', label: 'Lead inicial', color: 'bg-gray-100 text-gray-800' },
+        { code: '1095534673', label: 'Reunião marcada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1095534674', label: 'Reunião realizada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1095534675', label: 'Aguardando documentação', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1043275525', label: 'Documentação enviada', color: 'bg-blue-100 text-blue-800' },
+        { code: '1043275526', label: 'Aguardando documentos complementares', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1043275527', label: 'Em análise do backoffice', color: 'bg-purple-100 text-purple-800' },
+        { code: '1062003577', label: 'Apresentação da proposta', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1186972699', label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
+        { code: '1206453052', label: 'Stand by', color: 'bg-teal-100 text-teal-800' },
+        { code: '1204075783', label: 'Comitê interno', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1208748705', label: 'Comitê investidor', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1208820114', label: 'Segunda proposta cliente', color: 'bg-orange-100 text-orange-800' },
+        { code: '1062003578', label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
+        { code: '1095528865', label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
+        { code: '1095528866', label: 'Reajuste da proposta', color: 'bg-orange-100 text-orange-800' },
+        { code: '1095528867', label: 'Documentação para formalização', color: 'bg-yellow-100 text-yellow-800' },
+        { code: '1095528868', label: 'Formalização Jurídica', color: 'bg-indigo-100 text-indigo-800' },
+        { code: '1095528869', label: 'Condicionais e Registro do imóveis', color: 'bg-purple-100 text-purple-800' },
+        { code: '1095528870', label: 'Finalização do pagamento', color: 'bg-green-100 text-green-800' },
+        { code: '1095528871', label: 'Em locação', color: 'bg-green-100 text-green-800' },
+        { code: '1095528872', label: 'Descartado', color: 'bg-gray-100 text-gray-800' },
+        { code: '1095528873', label: 'Perdido', color: 'bg-red-100 text-red-800' }
+      ];
+    },
+
+    /**
+     * Inicializar array de status selecionados (todos exceto Perdido e Descartado)
+     * @returns {Array} Array de códigos de status
+     */
+    initSelectedStatuses: function () {
+      var allStatuses = this.getAllFranquiaStatuses();
+      var selected = [];
+      
+      for (var i = 0; i < allStatuses.length; i++) {
+        var status = allStatuses[i];
+        // Excluir Perdido (1095528873) e Descartado (1095528872)
+        if (status.code !== '1095528873' && status.code !== '1095528872') {
+          selected.push(status.code);
+        }
+      }
+      
+      return selected;
     },
 
     getPrioridadeInfo: function (priority) {
@@ -709,10 +888,301 @@
       }
     },
 
-    filterBy: function (filter) {
-      this.currentFilter = filter;
-      // console.log('🔍 Filtro Status alterado para:', filter);
+    /**
+     * Obter ordem numérica da prioridade para ordenação
+     * @param {string} priority - Prioridade (LOW, MEDIUM, HIGH, URGENT)
+     * @returns {number} Ordem numérica (0-4)
+     */
+    getPriorityOrder: function (priority) {
+      if (!priority) return 0;
+      var orderMap = {
+        'LOW': 1,
+        'MEDIUM': 2,
+        'HIGH': 3,
+        'URGENT': 4
+      };
+      return orderMap[priority] || 0;
+    },
+
+    /**
+     * Obter ícone de ordenação para exibição no cabeçalho
+     * @param {string} columnName - Nome da coluna
+     * @returns {string} HTML do ícone SVG
+     */
+    getSortIcon: function (columnName) {
+      var isActive = this.currentSortColumn === columnName;
+      var direction = this.currentSortDirection;
+      
+      if (!isActive) {
+        // Ícone neutro (duas setas)
+        return `
+          <svg class="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+          </svg>
+        `;
+      }
+      
+      if (direction === 'asc') {
+        // Seta para cima
+        return `
+          <svg class="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+          </svg>
+        `;
+      } else {
+        // Seta para baixo
+        return `
+          <svg class="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        `;
+      }
+    },
+
+    /**
+     * Alternar ordenação ao clicar em uma coluna
+     * @param {string} columnName - Nome da coluna clicada
+     */
+    toggleSort: function (columnName) {
+      if (this.currentSortColumn === columnName) {
+        // Se é a mesma coluna, inverte a direção
+        this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        // Se é coluna diferente, define nova coluna e começa com 'asc'
+        this.currentSortColumn = columnName;
+        this.currentSortDirection = 'asc';
+      }
       this.reloadTable();
+    },
+
+    /**
+     * Ordenar array de negócios por coluna e direção
+     * @param {Array} negocios - Array de negócios
+     * @param {string} column - Nome da coluna
+     * @param {string} direction - Direção ('asc' ou 'desc')
+     * @returns {Array} Array ordenado
+     */
+    sortNegocios: function (negocios, column, direction) {
+      var self = this;
+      var sorted = negocios.slice(); // Cópia para não modificar o original
+      
+      sorted.sort(function (a, b) {
+        var result = 0;
+        
+        switch (column) {
+          case 'nome':
+            // Ordenação alfabética case-insensitive
+            var nomeA = (a.dealname || a.name || '').toLowerCase();
+            var nomeB = (b.dealname || b.name || '').toLowerCase();
+            if (nomeA < nomeB) result = -1;
+            else if (nomeA > nomeB) result = 1;
+            else result = 0;
+            break;
+            
+          case 'status':
+            // Ordenação pelo label do status (alfabética)
+            var statusA = self.getFranquiaStatusInfo(a.ticket_franquia_stage).label;
+            var statusB = self.getFranquiaStatusInfo(b.ticket_franquia_stage).label;
+            if (statusA < statusB) result = -1;
+            else if (statusA > statusB) result = 1;
+            else result = 0;
+            break;
+            
+          case 'data_criacao':
+            // Ordenação por timestamp (numérica)
+            var dataA = a.ticket_franquia_createdate || 0;
+            var dataB = b.ticket_franquia_createdate || 0;
+            result = dataA - dataB;
+            break;
+            
+          case 'prioridade':
+            // Ordenação customizada por prioridade
+            var orderA = self.getPriorityOrder(a.homecash_priority);
+            var orderB = self.getPriorityOrder(b.homecash_priority);
+            result = orderA - orderB;
+            break;
+            
+          case 'dias_esteira':
+            // Ordenação numérica por dias na esteira
+            var diasA = self.getDiasNaEsteira(a.homecash_createdate || a.original_createdate).dias;
+            var diasB = self.getDiasNaEsteira(b.homecash_createdate || b.original_createdate).dias;
+            result = diasA - diasB;
+            break;
+            
+          default:
+            result = 0;
+        }
+        
+        // Aplicar direção (inverter se descendente)
+        return direction === 'desc' ? -result : result;
+      });
+      
+      return sorted;
+    },
+
+    /**
+     * Abrir/fechar dropdown de status
+     */
+    toggleStatusDropdown: function () {
+      var dropdown = document.getElementById('status-filter-dropdown');
+      if (!dropdown) return;
+
+      var isOpen = !dropdown.classList.contains('hidden');
+      
+      if (isOpen) {
+        this.closeStatusDropdown();
+      } else {
+        dropdown.classList.remove('hidden');
+        this.statusDropdownOpen = true;
+        // Adicionar listener para fechar ao clicar fora
+        setTimeout(function() {
+          document.addEventListener('click', function closeHandler(e) {
+            var btn = document.getElementById('status-filter-btn');
+            var dropdownEl = document.getElementById('status-filter-dropdown');
+            
+            if (dropdownEl && btn && !dropdownEl.contains(e.target) && !btn.contains(e.target)) {
+              window.negociosModule.closeStatusDropdown();
+              document.removeEventListener('click', closeHandler);
+            }
+          });
+        }, 100);
+      }
+    },
+
+    /**
+     * Fechar dropdown de status
+     */
+    closeStatusDropdown: function () {
+      var dropdown = document.getElementById('status-filter-dropdown');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        this.statusDropdownOpen = false;
+      }
+    },
+
+    /**
+     * Alternar seleção de um status
+     * @param {string} statusCode - Código do status
+     */
+    toggleStatusSelection: function (statusCode) {
+      var index = this.selectedStatuses.indexOf(statusCode);
+      
+      if (index !== -1) {
+        // Remover se já estiver selecionado
+        this.selectedStatuses.splice(index, 1);
+      } else {
+        // Adicionar se não estiver selecionado
+        this.selectedStatuses.push(statusCode);
+      }
+      
+      // Atualizar checkbox visualmente
+      this.updateCheckboxState(statusCode);
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
+      this.reloadTable();
+    },
+
+    /**
+     * Selecionar todos os status
+     */
+    selectAllStatuses: function () {
+      var allStatuses = this.getAllFranquiaStatuses();
+      this.selectedStatuses = [];
+      
+      for (var i = 0; i < allStatuses.length; i++) {
+        this.selectedStatuses.push(allStatuses[i].code);
+      }
+      
+      // Atualizar todos os checkboxes
+      this.updateAllCheckboxes();
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
+      this.reloadTable();
+    },
+
+    /**
+     * Deselecionar todos os status
+     */
+    deselectAllStatuses: function () {
+      this.selectedStatuses = [];
+      
+      // Atualizar todos os checkboxes
+      this.updateAllCheckboxes();
+      
+      // Atualizar texto do botão
+      this.updateStatusButtonText();
+      
+      // Recarregar tabela
+      this.reloadTable();
+    },
+
+    /**
+     * Atualizar estado visual de um checkbox específico
+     * @param {string} statusCode - Código do status
+     */
+    updateCheckboxState: function (statusCode) {
+      var checkbox = document.querySelector('input[data-status-code="' + statusCode + '"]');
+      if (checkbox) {
+        checkbox.checked = this.selectedStatuses.indexOf(statusCode) !== -1;
+      }
+    },
+
+    /**
+     * Atualizar estado visual de todos os checkboxes
+     */
+    updateAllCheckboxes: function () {
+      var self = this;
+      var checkboxes = document.querySelectorAll('input[data-status-code]');
+      checkboxes.forEach(function(checkbox) {
+        var statusCode = checkbox.getAttribute('data-status-code');
+        checkbox.checked = self.selectedStatuses.indexOf(statusCode) !== -1;
+      });
+    },
+
+    /**
+     * Atualizar texto do botão de status
+     */
+    updateStatusButtonText: function () {
+      var textEl = document.getElementById('status-filter-text');
+      if (textEl) {
+        textEl.textContent = this.getStatusDisplayText();
+      }
+    },
+
+    /**
+     * Obter texto formatado para exibição no botão
+     * @returns {string} Texto formatado
+     */
+    getStatusDisplayText: function () {
+      var total = this.getAllFranquiaStatuses().length;
+      var selected = (this.selectedStatuses && this.selectedStatuses.length) ? this.selectedStatuses.length : 0;
+      
+      if (selected === 0) {
+        return 'Nenhum status selecionado';
+      } else if (selected === total) {
+        return 'Todos os status selecionados';
+      } else if (selected <= 3 && this.selectedStatuses) {
+        // Mostrar nomes dos status selecionados se forem poucos
+        var allStatuses = this.getAllFranquiaStatuses();
+        var selectedLabels = [];
+        for (var i = 0; i < this.selectedStatuses.length; i++) {
+          for (var j = 0; j < allStatuses.length; j++) {
+            if (allStatuses[j].code === this.selectedStatuses[i]) {
+              selectedLabels.push(allStatuses[j].label);
+              break;
+            }
+          }
+        }
+        return selectedLabels.join(', ');
+      } else {
+        return selected + ' de ' + total + ' status selecionados';
+      }
     },
 
     // ✅ FILTRO POR DATA (nova função para selects)
@@ -729,10 +1199,22 @@
       this.reloadTable();
     },
 
+    // ✅ FILTRO POR NOME (nova função para input)
+    filterByNameInput: function (nameFilter) {
+      this.currentNameFilter = nameFilter;
+      // console.log('🔍 Filtro Nome alterado para:', nameFilter);
+      this.reloadTable();
+    },
+
     // ✅ RECARREGAR TABELA (sem skeleton, apenas atualizar conteúdo)
     reloadTable: function () {
-      // Recarregar dados via API
-      this.loadNegocios();
+      // Se temos dados em cache, apenas re-renderizar
+      if (this.cachedNegocios && this.cachedNegocios.length > 0) {
+        this.renderNegocios(this.cachedNegocios);
+      } else {
+        // Se não temos cache, buscar da API
+        this.loadNegocios();
+      }
     },
 
     viewNegocio: function (negocioId, ticketHomecashId) {
@@ -772,14 +1254,37 @@
     addEventListeners: function () {
       var self = this;
 
-      // ✅ EVENT LISTENERS PARA OS SELECTS DE FILTRO
-      var statusSelect = document.getElementById('status-filter');
-      if (statusSelect) {
-        statusSelect.addEventListener('change', function () {
-          self.filterBy(this.value);
+      // ✅ EVENT LISTENERS PARA CHECKBOXES DE STATUS
+      var statusCheckboxes = document.querySelectorAll('input[type="checkbox"][data-status-code]');
+      statusCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+          var statusCode = this.getAttribute('data-status-code');
+          self.toggleStatusSelection(statusCode);
+        });
+        
+        // Prevenir que o click no checkbox feche o dropdown
+        checkbox.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      });
+
+      // ✅ EVENT LISTENERS PARA BOTÕES DE SELEÇÃO RÁPIDA
+      var selectAllBtn = document.querySelector('[onclick*="selectAllStatuses"]');
+      var deselectAllBtn = document.querySelector('[onclick*="deselectAllStatuses"]');
+      
+      if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      }
+      
+      if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
         });
       }
 
+      // ✅ EVENT LISTENERS PARA OS SELECTS DE FILTRO (Data e Prioridade)
       var dateSelect = document.getElementById('date-filter');
       if (dateSelect) {
         dateSelect.addEventListener('change', function () {
@@ -791,6 +1296,14 @@
       if (prioritySelect) {
         prioritySelect.addEventListener('change', function () {
           self.filterByPrioritySelect(this.value);
+        });
+      }
+
+      // ✅ EVENT LISTENER PARA O CAMPO DE BUSCA POR NOME
+      var nameInput = document.getElementById('name-filter');
+      if (nameInput) {
+        nameInput.addEventListener('input', function () {
+          self.filterByNameInput(this.value);
         });
       }
     },

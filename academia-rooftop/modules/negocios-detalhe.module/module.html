@@ -1,7 +1,27 @@
+<!-- {% set view_contact_id = request.query_dict.view_contact_id %}
+{% if view_contact_id %}
+  {% set contact_id = view_contact_id %}
+{% elif request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set contact_id = request.contact.contact_vid %}
+{% else %}
+  {% set contact_id = null %}
+{% endif %}
+
+
+{# Carrega os dados do contato/franqueado #}
+{% if contact_id %}
+  {% set contato = crm_object("contact", contact_id, "admin_do_portal") %}
+{% else %}
+  {% set contato = null %}
+{% endif %}
+
+{% set isAdmin = (contato.admin_do_portal == 'Sim') %} -->
+
+
 {# Página de Detalhes do Negócio - Portal do Franqueado Rooftop #}
-{% set negocio_id = request.query_dict.negocio_id || 43490150668  %}
+{% set negocio_id = request.query_dict.negocio_id %}
 <!--  || "39825791249" -->
-{% set ticket_id_franquia = request.query_dict.ticket_id_franquia || 29537449366  %}
+{% set ticket_id_franquia = request.query_dict.ticket_id_franquia %}
 <!--  || "24091021106" -->
 
 {# Carrega os dados do Negócio e do Ticket da Franquia #}

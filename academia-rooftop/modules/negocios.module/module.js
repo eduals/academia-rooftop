@@ -67,6 +67,10 @@
       this.currentPriorityFilter = 'todas';
       this.currentNameFilter = '';
       this.statusDropdownOpen = false;
+      
+      // ✅ ORDENAÇÃO: Estado inicial (padrão: dias na esteira descendente)
+      this.currentSortColumn = 'dias_esteira';
+      this.currentSortDirection = 'desc';
 
       // ✅ GARANTIR QUE O BOTÃO COMECE ESCONDIDO
       this.hideHeaderButton();
@@ -433,20 +437,55 @@
                <table class="min-w-full divide-y divide-gray-200">
                  <thead class="bg-gray-50">
                    <tr>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Negócio
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('nome')"
+                       data-sort-column="nome"
+                     >
+                       <span class="flex items-center">
+                         Negócio
+                         ${this.getSortIcon('nome')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Status
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('status')"
+                       data-sort-column="status"
+                     >
+                       <span class="flex items-center">
+                         Status
+                         ${this.getSortIcon('status')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Data de criação
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('data_criacao')"
+                       data-sort-column="data_criacao"
+                     >
+                       <span class="flex items-center">
+                         Data de criação
+                         ${this.getSortIcon('data_criacao')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Prioridade
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('prioridade')"
+                       data-sort-column="prioridade"
+                     >
+                       <span class="flex items-center">
+                         Prioridade
+                         ${this.getSortIcon('prioridade')}
+                       </span>
                      </th>
-                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Dias na esteira
+                     <th 
+                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                       onclick="window.negociosModule.toggleSort('dias_esteira')"
+                       data-sort-column="dias_esteira"
+                     >
+                       <span class="flex items-center">
+                         Dias na esteira
+                         ${this.getSortIcon('dias_esteira')}
+                       </span>
                      </th>
                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                        Ações
@@ -663,12 +702,8 @@
         });
       }
 
-      // ✅ ORDENAÇÃO PADRÃO: DIAS NA ESTEIRA (MAIOR → MENOR)
-      filtered.sort((a, b) => {
-        var diasA = this.getDiasNaEsteira(a.homecash_createdate).dias;
-        var diasB = this.getDiasNaEsteira(b.homecash_createdate).dias;
-        return diasB - diasA; // Maior para menor
-      });
+      // ✅ ORDENAÇÃO DINÂMICA
+      filtered = this.sortNegocios(filtered, this.currentSortColumn, this.currentSortDirection);
 
       return filtered;
     },
@@ -851,6 +886,138 @@
       } catch (e) {
         return { dias: 0, color: 'bg-gray-100 text-gray-800' };
       }
+    },
+
+    /**
+     * Obter ordem numérica da prioridade para ordenação
+     * @param {string} priority - Prioridade (LOW, MEDIUM, HIGH, URGENT)
+     * @returns {number} Ordem numérica (0-4)
+     */
+    getPriorityOrder: function (priority) {
+      if (!priority) return 0;
+      var orderMap = {
+        'LOW': 1,
+        'MEDIUM': 2,
+        'HIGH': 3,
+        'URGENT': 4
+      };
+      return orderMap[priority] || 0;
+    },
+
+    /**
+     * Obter ícone de ordenação para exibição no cabeçalho
+     * @param {string} columnName - Nome da coluna
+     * @returns {string} HTML do ícone SVG
+     */
+    getSortIcon: function (columnName) {
+      var isActive = this.currentSortColumn === columnName;
+      var direction = this.currentSortDirection;
+      
+      if (!isActive) {
+        // Ícone neutro (duas setas)
+        return `
+          <svg class="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+          </svg>
+        `;
+      }
+      
+      if (direction === 'asc') {
+        // Seta para cima
+        return `
+          <svg class="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+          </svg>
+        `;
+      } else {
+        // Seta para baixo
+        return `
+          <svg class="w-4 h-4 text-blue-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        `;
+      }
+    },
+
+    /**
+     * Alternar ordenação ao clicar em uma coluna
+     * @param {string} columnName - Nome da coluna clicada
+     */
+    toggleSort: function (columnName) {
+      if (this.currentSortColumn === columnName) {
+        // Se é a mesma coluna, inverte a direção
+        this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        // Se é coluna diferente, define nova coluna e começa com 'asc'
+        this.currentSortColumn = columnName;
+        this.currentSortDirection = 'asc';
+      }
+      this.reloadTable();
+    },
+
+    /**
+     * Ordenar array de negócios por coluna e direção
+     * @param {Array} negocios - Array de negócios
+     * @param {string} column - Nome da coluna
+     * @param {string} direction - Direção ('asc' ou 'desc')
+     * @returns {Array} Array ordenado
+     */
+    sortNegocios: function (negocios, column, direction) {
+      var self = this;
+      var sorted = negocios.slice(); // Cópia para não modificar o original
+      
+      sorted.sort(function (a, b) {
+        var result = 0;
+        
+        switch (column) {
+          case 'nome':
+            // Ordenação alfabética case-insensitive
+            var nomeA = (a.dealname || a.name || '').toLowerCase();
+            var nomeB = (b.dealname || b.name || '').toLowerCase();
+            if (nomeA < nomeB) result = -1;
+            else if (nomeA > nomeB) result = 1;
+            else result = 0;
+            break;
+            
+          case 'status':
+            // Ordenação pelo label do status (alfabética)
+            var statusA = self.getFranquiaStatusInfo(a.ticket_franquia_stage).label;
+            var statusB = self.getFranquiaStatusInfo(b.ticket_franquia_stage).label;
+            if (statusA < statusB) result = -1;
+            else if (statusA > statusB) result = 1;
+            else result = 0;
+            break;
+            
+          case 'data_criacao':
+            // Ordenação por timestamp (numérica)
+            var dataA = a.ticket_franquia_createdate || 0;
+            var dataB = b.ticket_franquia_createdate || 0;
+            result = dataA - dataB;
+            break;
+            
+          case 'prioridade':
+            // Ordenação customizada por prioridade
+            var orderA = self.getPriorityOrder(a.homecash_priority);
+            var orderB = self.getPriorityOrder(b.homecash_priority);
+            result = orderA - orderB;
+            break;
+            
+          case 'dias_esteira':
+            // Ordenação numérica por dias na esteira
+            var diasA = self.getDiasNaEsteira(a.homecash_createdate || a.original_createdate).dias;
+            var diasB = self.getDiasNaEsteira(b.homecash_createdate || b.original_createdate).dias;
+            result = diasA - diasB;
+            break;
+            
+          default:
+            result = 0;
+        }
+        
+        // Aplicar direção (inverter se descendente)
+        return direction === 'desc' ? -result : result;
+      });
+      
+      return sorted;
     },
 
     /**

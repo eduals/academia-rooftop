@@ -1321,8 +1321,8 @@
                     <div><p class="text-sm font-medium text-slate-500">Prioridade</p><span class="badge ${priorityInfo.colorClass} mt-1" data-field="hs_ticket_priority">${priorityInfo.icon} ${priorityInfo.label}</span></div>
                     <div><p class="text-sm font-medium text-slate-500">História do cliente</p><p class="text-base text-slate-700 mt-1 bg-slate-50 p-3 rounded-lg border border-slate-200" data-field="historia_do_cliente">${negocio.historia_do_cliente || 'Sem histórico'}</p></div>
                     <div><p class="text-sm font-medium text-slate-500">Principal objetivo</p><p class="text-base text-slate-700 mt-1" data-field="qual_o_seu_principal_objetivo_">${objetivoLabel}</p></div>
-                    <div><p class="text-sm font-medium text-slate-500">Objetivo secundário</p><p class="text-base text-slate-700 mt-1">${negocio.objetivo_secundario || 'Não informado'}</p></div>
-                    <div><p class="text-sm font-medium text-slate-500">Solução procurada</p><p class="text-base text-slate-700 mt-1">${negocio.solucao_procurada || 'Não informado'}</p></div>
+                    ${ticket && ticket.objetivo_secundario && String(ticket.objetivo_secundario).trim() ? `<div><p class="text-sm font-medium text-slate-500">Objetivo secundário</p><p class="text-base text-slate-700 mt-1">${ticket.objetivo_secundario}</p></div>` : ''}
+                    ${ticket && ticket.solucao_procurada && String(ticket.solucao_procurada).trim() ? `<div><p class="text-sm font-medium text-slate-500">Solução procurada</p><p class="text-base text-slate-700 mt-1">${ticket.solucao_procurada}</p></div>` : ''}
                 </div>
                 <div class="edit-mode hidden space-y-4">
                     <div>

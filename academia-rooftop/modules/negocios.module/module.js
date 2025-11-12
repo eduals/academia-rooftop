@@ -559,7 +559,7 @@
       var nome = negocio.dealname || negocio.name || 'Sem nome';
       var status = this.getFranquiaStatusInfo(negocio.ticket_franquia_stage);
       var data = negocio.ticket_franquia_createdate ? this.formatDate(negocio.ticket_franquia_createdate) : '';
-      var prioridade = this.getPrioridadeInfo(negocio.homecash_priority || 'MEDIUM');
+      var prioridade = this.getPrioridadeInfo(negocio.ticket_franquia_priority || 'MEDIUM');
       var diasEsteira = this.getDiasNaEsteira(negocio.original_createdate || negocio.homecash_createdate);
 
       // Verificar se é lead recuperado (compatível com ES5)
@@ -662,7 +662,7 @@
               class="inline-block cursor-pointer hover:opacity-80 transition-opacity"
               data-priority-cell
               data-ticket-id="${negocio.ticket_franquia_id}"
-              data-priority="${prioridade.value}"
+              data-priority="${negocio.ticket_franquia_priority || 'MEDIUM'}"
               onclick="event.stopPropagation(); window.negociosModule.abrirEdicaoPrioridade(this, event)"
               title="Clique para editar a prioridade"
             >
@@ -700,7 +700,7 @@
 
       // ✅ FILTRO POR PRIORIDADE  
       if (this.currentPriorityFilter && this.currentPriorityFilter !== 'todas') {
-        filtered = filtered.filter(n => n.homecash_priority === this.currentPriorityFilter);
+        filtered = filtered.filter(n => n.ticket_franquia_priority === this.currentPriorityFilter);
       }
 
       // ✅ FILTRO POR NOME
@@ -1007,8 +1007,8 @@
             
           case 'prioridade':
             // Ordenação customizada por prioridade
-            var orderA = self.getPriorityOrder(a.homecash_priority);
-            var orderB = self.getPriorityOrder(b.homecash_priority);
+            var orderA = self.getPriorityOrder(a.ticket_franquia_priority);
+            var orderB = self.getPriorityOrder(b.ticket_franquia_priority);
             result = orderA - orderB;
             break;
             
@@ -2245,6 +2245,7 @@
       cell.innerHTML = selectHTML;
 
       var selectElement = document.getElementById('priority-editor-' + ticketId);
+      var clickOutsideHandler = null; // Variável para armazenar o handler
 
       if (selectElement) {
         // Prevenir propagação de eventos do select
@@ -2266,6 +2267,11 @@
 
           // Só atualizar se realmente mudou
           if (newPriority !== originalPriority) {
+            // Remover o listener de click fora antes de atualizar
+            if (clickOutsideHandler) {
+              document.removeEventListener('click', clickOutsideHandler);
+              clickOutsideHandler = null;
+            }
             self.atualizarPrioridade(ticketId, newPriority, cell);
           }
         });
@@ -2273,6 +2279,11 @@
         // Event listener para ESC (cancelar)
         selectElement.addEventListener('keydown', function (e) {
           if (e.key === 'Escape') {
+            // Remover listener de click fora
+            if (clickOutsideHandler) {
+              document.removeEventListener('click', clickOutsideHandler);
+              clickOutsideHandler = null;
+            }
             self.fecharEdicaoPrioridade(cell, currentPriority);
           }
         });
@@ -2280,13 +2291,26 @@
         // Event listener para click fora do select (fechar sem salvar)
         // Delay maior para garantir que o evento inicial já foi processado
         setTimeout(function() {
-          document.addEventListener('click', function clickOutsideHandler(e) {
+          clickOutsideHandler = function(e) {
             // Verificar se o click foi fora do select
             if (selectElement && !selectElement.contains(e.target)) {
-              self.fecharEdicaoPrioridade(cell, currentPriority);
+              // Verificar se a célula já foi atualizada (se o data-priority mudou)
+              var currentDataPriority = cell.getAttribute('data-priority');
+              if (currentDataPriority && currentDataPriority !== currentPriority) {
+                // A célula já foi atualizada, não restaurar o valor antigo
+                // Apenas remover o select se ainda existir
+                if (selectElement && selectElement.parentNode === cell) {
+                  // Não fazer nada, a célula já está atualizada
+                }
+              } else {
+                // A célula não foi atualizada, restaurar valor original
+                self.fecharEdicaoPrioridade(cell, currentPriority);
+              }
               document.removeEventListener('click', clickOutsideHandler);
+              clickOutsideHandler = null;
             }
-          });
+          };
+          document.addEventListener('click', clickOutsideHandler);
         }, 300);
       }
     },
@@ -2343,6 +2367,19 @@
         .then(function (responseData) {
           // console.log('✅ Prioridade atualizada:', responseData);
 
+          // Atualizar cache se existir
+          if (self.cachedNegocios && Array.isArray(self.cachedNegocios)) {
+            var ticketId = cell.getAttribute('data-ticket-id');
+            for (var i = 0; i < self.cachedNegocios.length; i++) {
+              if (self.cachedNegocios[i].ticket_franquia_id === ticketId) {
+                self.cachedNegocios[i].ticket_franquia_priority = newPriority;
+                // Manter compatibilidade com homecash_priority também
+                self.cachedNegocios[i].homecash_priority = newPriority;
+                break;
+              }
+            }
+          }
+
           // Atualizar célula com novo valor
           var prioridadeInfo = self.getPrioridadeInfo(newPriority);
           cell.setAttribute('data-priority', newPriority);
@@ -2378,11 +2415,17 @@
      */
     fecharEdicaoPrioridade: function (cell, priority) {
       // Se cell e priority forem fornecidos, restaurar valor
+      // MAS só se a célula ainda não foi atualizada
       if (cell && priority) {
-        var prioridadeInfo = this.getPrioridadeInfo(priority);
-        cell.innerHTML = `
-          <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
-        `;
+        var currentDataPriority = cell.getAttribute('data-priority');
+        // Só restaurar se o data-priority ainda for o valor original
+        if (!currentDataPriority || currentDataPriority === priority) {
+          var prioridadeInfo = this.getPrioridadeInfo(priority);
+          cell.innerHTML = `
+            <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
+          `;
+          cell.setAttribute('data-priority', priority);
+        }
       }
 
       // Remover todos os editores abertos
@@ -2394,10 +2437,15 @@
         if (ticketId && originalPriority) {
           var parentCell = editor.closest('[data-priority-cell]');
           if (parentCell) {
-            var prioridadeInfo = window.negociosModule.getPrioridadeInfo(originalPriority);
-            parentCell.innerHTML = `
-              <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
-            `;
+            // Verificar se a célula já foi atualizada
+            var currentDataPriority = parentCell.getAttribute('data-priority');
+            if (!currentDataPriority || currentDataPriority === originalPriority) {
+              var prioridadeInfo = window.negociosModule.getPrioridadeInfo(originalPriority);
+              parentCell.innerHTML = `
+                <span class="px-2 py-1 text-xs rounded-full ${prioridadeInfo.color}">${prioridadeInfo.label}</span>
+              `;
+              parentCell.setAttribute('data-priority', originalPriority);
+            }
           }
         }
       });

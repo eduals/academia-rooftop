@@ -1510,13 +1510,6 @@
       // Verificar se valores do comitê investidor estão preenchidos
       const valoresComiteInvestidorPreenchidos = !isCompraZero && !isLocacaoZero;
 
-      // Lógica de exibição para Fluxo 2:
-      // - Se fluxo 2 E está na etapa de avaliação externa: ocultar valores do comitê interno e primeira proposta
-      // - Se fluxo 2 E valores do comitê investidor preenchidos: mostrar tudo
-      // - Se fluxo 2 E valores do comitê investidor NÃO preenchidos: ocultar valores e propostas
-      const shouldHideComiteInternoValues = isFluxo2 && currentStageId === avaliacaoExternaStageId && !valoresComiteInvestidorPreenchidos;
-      const shouldShowFluxo2Content = isFluxo2 && valoresComiteInvestidorPreenchidos;
-
       // Lista ordenada das etapas do funil
       const stageOrder = [
         '1095534672',
@@ -1524,12 +1517,12 @@
         '1095534674',
         '1043275525',
         '1043275526',
-        '1095528865',
+        '1095528865', // Avaliação do imóvel (comitê interno) - MOVER PARA ANTES
         '1204075783',
-        '1043275527',
-        '1062003577',
+        '1043275527', // Pré Análise e Due Diligence - MOVER PARA DEPOIS
+        '1062003577', // Proposta disponível para apresentação
         '1186972699',
-        '1062003578',
+        '1062003578', // Pedido de Contraproposta do cliente - MOVER PARA DEPOIS da proposta
         '1208748705',
         '1208820114', // Proposta Comitê Investidor / Segunda proposta cliente
         '1095528866',
@@ -1551,25 +1544,51 @@
       const propostaComiteInvestidorId = '1208820114';
       const propostaComiteInvestidorIndex = stageOrder.indexOf(propostaComiteInvestidorId);
       
-      // Verificar se já chegou ou passou pela etapa "Proposta Comitê Investidor"
+      // ID da etapa "Proposta disponível para apresentação" (fluxo < 2M)
+      const propostaDisponivelIdFluxo1 = '1062003577';
+      const propostaDisponivelIndexFluxo1 = stageOrder.indexOf(propostaDisponivelIdFluxo1);
+      
+      // Verificar se já chegou ou passou pela etapa "Proposta Comitê Investidor" (para seção pós comitê investidor)
       const hasReachedPropostaComiteInvestidor = currentIndex !== -1 && propostaComiteInvestidorIndex !== -1 && currentIndex >= propostaComiteInvestidorIndex;
+      
+      // Verificar se já chegou na etapa apropriada para "Valores de Avaliação pós comitê interno"
+      // - Fluxo < 2M: "Proposta disponível para apresentação" (1062003577)
+      // - Fluxo >= 2M: "Proposta Comitê Investidor" (1208820114)
+      const etapaComiteInternoIndex = isFluxo2 ? propostaComiteInvestidorIndex : propostaDisponivelIndexFluxo1;
+      const hasReachedEtapaComiteInterno = currentIndex !== -1 && etapaComiteInternoIndex !== -1 && currentIndex >= etapaComiteInternoIndex;
+
+      // Lógica de exibição:
+      // - Fluxo < 2M: aplicar blur até chegar na etapa "Proposta disponível para apresentação" (1062003577)
+      // - Fluxo >= 2M: aplicar blur até chegar na etapa "Proposta Comitê Investidor" (1208820114)
+      // - Aplicar blur se não tiver link da apresentação
+      // - Card sempre visível, mas valores e link com blur quando necessário
+      // Para fluxo < 2M: verificar linkApresentacao
+      // Para fluxo >= 2M: verificar linkPropostaFinalComite
+      const hasLinkApresentacao = isFluxo2 
+        ? (resumoAprovacao.linkPropostaFinalComite && resumoAprovacao.linkPropostaFinalComite.trim() !== '')
+        : (resumoAprovacao.linkApresentacao && resumoAprovacao.linkApresentacao.trim() !== '');
+      
+      // Aplicar blur nos valores se não chegou na etapa apropriada OU se não tem link
+      const shouldBlurValues = !hasReachedEtapaComiteInterno || !hasLinkApresentacao;
+      
+      const shouldShowFluxo2Content = isFluxo2 && valoresComiteInvestidorPreenchidos;
 
       // console.log('currentStageId', currentStageId)
       // console.log('currentIndex', currentIndex)
       // console.log('propostaIndex', propostaIndex)
-      // Se a etapa atual está antes da "Proposta disponivel para apresentação", bloquear visualização
-      const shouldBlurValues = currentIndex !== -1 && currentIndex < propostaIndex;
+      // Se a etapa atual está antes da "Proposta disponivel para apresentação", bloquear visualização do botão
+      const shouldBlurButton = currentIndex !== -1 && currentIndex < propostaIndex;
 
       // Classes CSS condicionais
+      // Aplicar blur nos valores quando necessário
       const blurClass = shouldBlurValues ? 'style="filter: blur(4px); pointer-events: none; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : '';
-      const buttonDisabledClass = shouldBlurValues ? 'disabled' : '';
-      const buttonStyleClass = shouldBlurValues
+      const buttonDisabledClass = shouldBlurButton || shouldBlurValues ? 'disabled' : '';
+      const buttonStyleClass = (shouldBlurButton || shouldBlurValues)
         ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-        : (resumoAprovacao.linkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed');
+        : (hasLinkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed');
 
       return `
           <div class="card p-6">
-              ${shouldHideComiteInternoValues ? '' : `
               <h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação pós comitê interno</h2>
               <div class="space-y-3 mb-6" ${blurClass}>
                   <div class="flex justify-between items-center py-2 border-b border-slate-100">
@@ -1600,21 +1619,20 @@
                               <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                           </div>
                           <button
-                             ${shouldBlurValues || !resumoAprovacao.linkApresentacao ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkApresentacao || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
+                             ${shouldBlurButton || shouldBlurValues || !hasLinkApresentacao ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkApresentacao || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
                              class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${buttonStyleClass} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
                               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                               </svg>
-                              ${shouldBlurValues ? 'Ainda não disponível' : (resumoAprovacao.linkApresentacao ? 'Abrir Apresentação' : 'Ainda não disponível')}
+                              ${shouldBlurButton || shouldBlurValues ? 'Ainda não disponível' : (hasLinkApresentacao ? 'Abrir Apresentação' : 'Ainda não disponível')}
                           </button>
                       </div>
                   </div>
               </div>
               `}
-              `}
 
               <!-- Histórico de Versões da Proposta -->
-              ${!shouldHideComiteInternoValues && resumoAprovacao.historicoPropostas && resumoAprovacao.historicoPropostas.historico && resumoAprovacao.historicoPropostas.historico.length > 0 ? `
+              ${resumoAprovacao.historicoPropostas && resumoAprovacao.historicoPropostas.historico && resumoAprovacao.historicoPropostas.historico.length > 0 ? `
               <div class="mb-6">
                   <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
                       <p class="text-xs font-medium text-slate-600 mb-2">Versões Anteriores</p>
@@ -1637,7 +1655,7 @@
               </div>
               ` : ''}
 
-              ${(shouldHideComiteInternoValues && !shouldShowFluxo2Content) || !hasReachedPropostaComiteInvestidor ? '' : `
+              ${!shouldShowFluxo2Content || !hasReachedPropostaComiteInvestidor ? '' : `
               <h2 class="text-lg font-semibold text-slate-900 mb-4 mt-8">Resumo da Aprovação pós comitê investidor</h2>
 
               <!-- Valores Aprovados -->
@@ -2293,12 +2311,12 @@
         { id: '1095534674', label: '1ª Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
         { id: '1043275525', label: 'Documentação enviada' },
         { id: '1043275526', label: 'Aguardando documentos complementares' },
-        { id: '1043275527', label: 'Pré Análise e Due Diligence' },
+        { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] }, // MOVER PARA ANTES
+        { id: '1043275527', label: 'Pré Análise e Due Diligence' }, // MOVER PARA DEPOIS
         { id: '1186972699', label: 'Avaliação externa', combinedIds: ['1186972699', '979376900'] },
-        { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] },
         { id: '1062003577', label: 'Proposta disponivel para apresentação' },
         { id: '1207696559', label: '2ª Reunião marcada', combinedIds: ['1207696559' , '1207696560'] },
-        { id: '1062003578', label: 'Pedido de Contraproposta do cliente' },
+        { id: '1062003578', label: 'Pedido de Contraproposta do cliente' }, // MOVER PARA DEPOIS da proposta
         { id: '1208748705', label: 'Comitê investidor' },
         { id: '1208820114', label: 'Segunda proposta cliente' },
         { id: '1095528866', label: 'Reajuste da proposta' },
@@ -2415,8 +2433,9 @@
         
         // 🔄 NOVA LÓGICA: Filtrar etapas do Fluxo 2
         if (isFluxo2) {
-          const etapasParaRemover = ['1095528865', '1062003577', '1207696559', '1062003578'];
-          const combinedIdsParaRemover = ['1204075783', '1207696560']; // IDs relacionados
+          // Remover apenas etapas específicas do fluxo < 2M, mantendo "Avaliação do imóvel (comitê interno)"
+          const etapasParaRemover = ['1062003577', '1207696559', '1062003578'];
+          const combinedIdsParaRemover = ['1207696560']; // IDs relacionados (removendo 1204075783 que é parte do comitê interno)
           
           steps = steps.filter(function(step) {
             // Remover step principal
@@ -5208,8 +5227,10 @@
       console.log('currentStep', currentStep)
       // Verificar condições para mostrar opção de avaliação externa
       var mostrarAvaliacaoExterna = valorMedioAmostrasNumero < 2000000 && currentStep === '1207696559';
+      // Verificar se é fluxo < 2M para mostrar opção de contraproposta
+      var isFluxoMenor2M = valorMedioAmostrasNumero < 2000000;
 
-      console.log('🔍 [Modal Apresentação] Valor imóvel:', valorMedioAmostrasNumero, '| Etapa atual:', currentStep, '| Mostrar avaliação externa:', mostrarAvaliacaoExterna);
+      console.log('🔍 [Modal Apresentação] Valor imóvel:', valorMedioAmostrasNumero, '| Etapa atual:', currentStep, '| Mostrar avaliação externa:', mostrarAvaliacaoExterna, '| Mostrar contraproposta:', isFluxoMenor2M);
 
       // Gerar opções do select de motivos de perda
       var motivosOptions = Object.entries(this.motivosPerda)
@@ -5249,8 +5270,9 @@
                   <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
                   <select id="apresentacao-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
                     <option value="">Selecione o próximo passo</option>
-                    ${mostrarAvaliacaoExterna ? '<option value="avaliacao_externa">Solicitar avaliação externa</option>' : '<option value="formalizar">Solicitar formalização de contrato</option>'}
-                    <!-- <option value="renegociar">Solicitar reajuste da proposta</option> -->
+                    ${mostrarAvaliacaoExterna ? '<option value="avaliacao_externa">Solicitar avaliação externa</option>' : ''}
+                    ${isFluxoMenor2M ? '<option value="contraproposta">Solicitar contraproposta</option>' : ''}
+                    ${!mostrarAvaliacaoExterna ? '<option value="formalizar">Solicitar formalização de contrato</option>' : ''}
                     <option value="standby">Pausar negociação (Stand by)</option>
                     <option value="perdido">Cliente NÃO quer seguir (Perder o lead)</option>
                   </select>
@@ -5641,6 +5663,9 @@
       var proximaEtapa, proximoLabel;
 
       if (proximoPasso === 'renegociar') {
+        proximaEtapa = '1062003578';
+        proximoLabel = 'Pedido de Contraproposta do cliente';
+      } else if (proximoPasso === 'contraproposta') {
         proximaEtapa = '1062003578';
         proximoLabel = 'Pedido de Contraproposta do cliente';
       } else if (proximoPasso === 'formalizar') {

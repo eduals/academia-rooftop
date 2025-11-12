@@ -1496,7 +1496,6 @@
 
       // Verificar se o ticket está na etapa "Proposta disponivel para apresentação" ou posterior
       const currentStageId = ticket?.hs_pipeline_stage;
-      const propostaDisponivelId = '1062003577';
       const avaliacaoExternaStageId = '1186972699';
 
       // Determinar se é Fluxo 2 (acima de R$2M)
@@ -1504,6 +1503,9 @@
       // Converter valor removendo pontos, vírgulas e espaços, mantendo apenas números
       const valorMedioAmostrasNumero = valorLimpo ? parseFloat(valorLimpo.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0;
       const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      
+      // Ajustar propostaDisponivelId para Fluxo 2
+      const propostaDisponivelId = isFluxo2 ? '1208748705' : '1062003577'; // Comitê investidor para Fluxo 2
 
       // Verificar se valores do comitê investidor estão preenchidos
       const valoresComiteInvestidorPreenchidos = !isCompraZero && !isLocacaoZero;
@@ -2342,50 +2344,102 @@
 
           return true;
         });
-        // TODO: Corrigir logica
-        // 🔄 NOVA LÓGICA DE REORDENAÇÃO DINÂMICA - Baseada em valor_medio_amostras
-        if (ticketPortal) {
-          // Obter valor médio das amostras do ticket associado
-          const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
-
-          if (ticket && ticket.valor_medio_amostras) {
-            const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
-            const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
-
-            console.log('🔄 [REORDENAÇÃO] Valor médio das amostras:', valorMedioAmostrasNumero);
-
-            // Se valor < R$ 2.000.000, mover Avaliação Externa para DEPOIS da 2ª Reunião Marcada
-            if (valorMedioAmostrasNumero < 2000000) {
-              console.log('🔄 [CENÁRIO < 2M] Movendo Avaliação Externa para DEPOIS da 2ª Reunião Marcada');
-
-              // Encontrar índices
-              const indexAvaliacaoExterna = steps.findIndex(step =>
-                step.id === '1186972699' || step.id === '979376900' ||
-                (step.combinedIds && (step.combinedIds.includes('1186972699') || step.combinedIds.includes('979376900')))
-              );
-              const index2aReuniaoMarcada = steps.findIndex(step =>
-                step.id === '1207696559'
-              );
-
-              console.log('🔄 [REORDENAÇÃO] Índices:', {
-                avaliacaoExterna: indexAvaliacaoExterna,
-                reuniao2Marcada: index2aReuniaoMarcada
-              });
-
-              // Mover apenas se Avaliação Externa estiver ANTES da 2ª Reunião Marcada
-              if (indexAvaliacaoExterna !== -1 && index2aReuniaoMarcada !== -1 && indexAvaliacaoExterna < index2aReuniaoMarcada) {
-                const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
-                steps.splice(index2aReuniaoMarcada, 0, avaliacaoExternaStep); // Inserir logo após 2ª Reunião Marcada
-
-                console.log('✅ [CENÁRIO < 2M] Avaliação Externa movida para DEPOIS da 2ª Reunião Marcada');
-                console.log('   Ordem: Pré-análise → Comitê Interno → Proposta Disponível → 2ª Reunião Marcada → Avaliação Externa');
+        
+        // 🔄 NOVA LÓGICA: Verificar Fluxo 2 e mapear currentStageId se necessário
+        const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+        let isFluxo2 = false;
+        
+        if (ticket && ticket.valor_medio_amostras) {
+          const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+          const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+          isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+          
+          // Mapear currentStageId se estiver em etapa filtrada no Fluxo 2
+          if (isFluxo2) {
+            const etapasFiltradas = ['1095528865', '1062003577', '1207696559', '1062003578'];
+            const avaliacaoExternaRealizada = ticketPortal?.hs_v2_date_entered_1186972699;
+            
+            if (etapasFiltradas.includes(currentStageId)) {
+              if (currentStageId === '1095528865' && !avaliacaoExternaRealizada) {
+                currentStageId = '1186972699'; // Mapear para Avaliação Externa
+                console.log('🔄 [FLUXO 2] Mapeando "Avaliação do imóvel (comitê interno)" para "Avaliação Externa"');
+              } else {
+                currentStageId = '1208748705'; // Mapear para Comitê Investidor
+                console.log('🔄 [FLUXO 2] Mapeando etapa filtrada para "Comitê Investidor"');
               }
-            } else {
-              // Se valor >= R$ 2.000.000, manter ordem DEFAULT (já definida em getFunnelSteps)
-              console.log('🔄 [CENÁRIO >= 2M] Mantendo ordem DEFAULT do funil');
-              console.log('   Ordem: Pré-análise → Avaliação Externa → Comitê Interno → Proposta Disponível');
             }
           }
+        }
+        
+        // TODO: Corrigir logica
+        // 🔄 NOVA LÓGICA DE REORDENAÇÃO DINÂMICA - Baseada em valor_medio_amostras
+        if (ticketPortal && ticket && ticket.valor_medio_amostras) {
+          // Reutilizar valor já calculado acima
+          const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+          const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+
+          console.log('🔄 [REORDENAÇÃO] Valor médio das amostras:', valorMedioAmostrasNumero);
+
+          // Se valor < R$ 2.000.000, mover Avaliação Externa para DEPOIS da 2ª Reunião Marcada
+          if (valorMedioAmostrasNumero < 2000000) {
+            console.log('🔄 [CENÁRIO < 2M] Movendo Avaliação Externa para DEPOIS da 2ª Reunião Marcada');
+
+            // Encontrar índices
+            const indexAvaliacaoExterna = steps.findIndex(step =>
+              step.id === '1186972699' || step.id === '979376900' ||
+              (step.combinedIds && (step.combinedIds.includes('1186972699') || step.combinedIds.includes('979376900')))
+            );
+            const index2aReuniaoMarcada = steps.findIndex(step =>
+              step.id === '1207696559'
+            );
+
+            console.log('🔄 [REORDENAÇÃO] Índices:', {
+              avaliacaoExterna: indexAvaliacaoExterna,
+              reuniao2Marcada: index2aReuniaoMarcada
+            });
+
+            // Mover apenas se Avaliação Externa estiver ANTES da 2ª Reunião Marcada
+            if (indexAvaliacaoExterna !== -1 && index2aReuniaoMarcada !== -1 && indexAvaliacaoExterna < index2aReuniaoMarcada) {
+              const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
+              steps.splice(index2aReuniaoMarcada, 0, avaliacaoExternaStep); // Inserir logo após 2ª Reunião Marcada
+
+              console.log('✅ [CENÁRIO < 2M] Avaliação Externa movida para DEPOIS da 2ª Reunião Marcada');
+              console.log('   Ordem: Pré-análise → Comitê Interno → Proposta Disponível → 2ª Reunião Marcada → Avaliação Externa');
+            }
+          } else {
+            // Se valor >= R$ 2.000.000, manter ordem DEFAULT (já definida em getFunnelSteps)
+            console.log('🔄 [CENÁRIO >= 2M] Mantendo ordem DEFAULT do funil');
+            console.log('   Ordem: Pré-análise → Avaliação Externa → Comitê Interno → Proposta Disponível');
+          }
+        }
+        
+        // 🔄 NOVA LÓGICA: Filtrar etapas do Fluxo 2
+        if (isFluxo2) {
+          const etapasParaRemover = ['1095528865', '1062003577', '1207696559', '1062003578'];
+          const combinedIdsParaRemover = ['1204075783', '1207696560']; // IDs relacionados
+          
+          steps = steps.filter(function(step) {
+            // Remover step principal
+            if (etapasParaRemover.includes(step.id)) {
+              console.log('🔄 [FLUXO 2] Removendo etapa:', step.label, '(', step.id, ')');
+              return false;
+            }
+            
+            // Remover se algum combinedId estiver na lista
+            if (step.combinedIds) {
+              const shouldRemove = step.combinedIds.some(function(id) {
+                return etapasParaRemover.includes(id) || combinedIdsParaRemover.includes(id);
+              });
+              if (shouldRemove) {
+                console.log('🔄 [FLUXO 2] Removendo etapa por combinedId:', step.label, '(', step.id, ')');
+                return false;
+              }
+            }
+            
+            return true;
+          });
+          
+          console.log('✅ [FLUXO 2] Etapas filtradas. Total de etapas restantes:', steps.length);
         }
 
         var currentIndex = steps.findIndex(step => {
@@ -6096,11 +6150,32 @@
     
     reabrirNegociacao: function() {
       var self = this;
-      this.showConfirm('Deseja reabrir a Pedido de Contraproposta do cliente?', function() {
-        self.updateStep('1062003577', 'Pedido de Contraproposta do cliente', {
-          tipo: 'reabertura_negociacao'
+      
+      // NOVA LÓGICA: Verificar Fluxo 2
+      const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+      let isFluxo2 = false;
+      
+      if (ticket && ticket.valor_medio_amostras) {
+        const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+        const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+        isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      }
+      
+      if (isFluxo2) {
+        // Para Fluxo 2, redirecionar para Comitê Investidor
+        this.showConfirm('Deseja reabrir a negociação e voltar para "Comitê investidor"?', function() {
+          self.updateStep('1208748705', 'Comitê investidor', {
+            tipo: 'reabertura_negociacao'
+          });
         });
-      });
+      } else {
+        // Comportamento original
+        this.showConfirm('Deseja reabrir a Pedido de Contraproposta do cliente?', function() {
+          self.updateStep('1062003577', 'Pedido de Contraproposta do cliente', {
+            tipo: 'reabertura_negociacao'
+          });
+        });
+      }
     },
 
     retomarNegociacao: function() {
@@ -6109,6 +6184,16 @@
       // Obter dados do ticket para verificar de qual etapa veio
       var ticketData = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data : null;
       var etapaAnterior = ticketData ? ticketData.etapa_anterior_standby : null;
+
+      // NOVA LÓGICA: Verificar Fluxo 2
+      const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+      let isFluxo2 = false;
+      
+      if (ticket && ticket.valor_medio_amostras) {
+        const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+        const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+        isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      }
 
       // Determinar etapa de retorno baseado na etapa anterior
       var etapaRetorno, labelRetorno, mensagem;
@@ -6119,10 +6204,17 @@
         labelRetorno = 'Segunda proposta cliente';
         mensagem = 'Deseja retomar a negociação e voltar para a etapa "Segunda proposta cliente"?';
       } else {
-        // Padrão: veio da 2ª Reunião marcada ou não tem etapa anterior definida
-        etapaRetorno = '1207696559';
-        labelRetorno = '2ª Reunião marcada';
-        mensagem = 'Deseja retomar a negociação e voltar para a etapa "2ª Reunião marcada"?';
+        // AJUSTE: Se Fluxo 2, mapear para Comitê Investidor
+        if (isFluxo2) {
+          etapaRetorno = '1208748705';
+          labelRetorno = 'Comitê investidor';
+          mensagem = 'Deseja retomar a negociação e voltar para a etapa "Comitê investidor"?';
+        } else {
+          // Padrão: veio da 2ª Reunião marcada ou não tem etapa anterior definida
+          etapaRetorno = '1207696559';
+          labelRetorno = '2ª Reunião marcada';
+          mensagem = 'Deseja retomar a negociação e voltar para a etapa "2ª Reunião marcada"?';
+        }
       }
 
       this.showConfirm(mensagem, function() {

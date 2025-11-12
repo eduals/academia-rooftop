@@ -2,6 +2,8 @@
 (function () {
   'use strict';
 
+  console.log('v2.0.0')
+
   var module = {
     n8nConfig: {
       baseUrl: 'https://n8n2.rooftop.com.br/webhook/portal',
@@ -32,17 +34,19 @@
       'valor_avaliacao': 'Valor de avaliação',
       'valor_aluguel': 'Valor do aluguel',
       'valor_liquidez': 'Valor de liquidez',
-      'prazo_recompra': 'Prazo de recompra',
       'sem_necessidade_imediata': 'Sem necessidade imediata - Interessado',
+      'prazo_recompra': 'Prazo de recompra',
       'produtos_mercado_venda': 'Produtos de mercado - Venda do imóvel',
       'produtos_mercado_emprestimo': 'Produtos de mercado - Empréstimo',
       'produtos_mercado_outros': 'Produtos de mercado - Outros',
       'influencias_familiares': 'Influências familiares',
       'contato_sem_sucesso': 'Contato sem sucesso',
-      'contato_parou_responder': 'Contato parou de responder',
+      'cliente_parou_responder': 'Cliente parou de responder',
+      'dados_incorretos': 'Dados incorretos',
       'nao_informou': 'Não informou o motivo',
-      'negativo_sem_interesse': 'Negativo - Sem interesse',
-      'pediu_descartar': 'Pediu para descartar'
+      'lead_estoque': 'Lead estoque',
+      'pediu_descartar': 'Pediu para descartar',
+      'outros': 'Outros'
     },
     // Estado do modal de finalização
     modalState: {
@@ -592,8 +596,14 @@
       }
 
       // Nome como link para detalhes
+      // Adicionar view_contact_id à URL se existir
+      var urlDetalhe = `/negocios/detalhe?negocio_id=${negocio.deal_original_id}&ticket_id_franquia=${negocio.ticket_franquia_id}`;
+      if (window.hubspotViewContactId) {
+        urlDetalhe += `&view_contact_id=${window.hubspotViewContactId}`;
+      }
+      
       var nomeComLink = `
-      <a href="/negocios/detalhe?negocio_id=${negocio.deal_original_id}&ticket_id_franquia=${negocio.ticket_franquia_id}" 
+      <a href="${urlDetalhe}" 
         class="text-blue-600 hover:text-blue-900 hover:underline font-medium" target="_blank">
         ${nome} 
         ${leadIcon}
@@ -1824,6 +1834,65 @@
     },
 
     /**
+     * Atualizar uma propriedade única do ticket via N8N
+     * @param {string} ticketId - ID do ticket
+     * @param {string} propertyName - Nome da propriedade do HubSpot
+     * @param {string} propertyValue - Valor da propriedade
+     * @returns {Promise} Promise que resolve com a resposta do N8N
+     */
+    atualizarPropriedadeTicket: function (ticketId, propertyName, propertyValue) {
+      var self = this;
+      var endpointUrl = this.n8nConfig.baseUrl + this.n8nConfig.endpoints.updateTicket;
+
+      // Preparar payload no formato correto: objectId + propriedade diretamente no body
+      var payload = {
+        objectId: ticketId
+      };
+      payload[propertyName] = propertyValue;
+
+      return new Promise(function (resolve, reject) {
+        fetch(endpointUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error('Erro HTTP: ' + response.status);
+            }
+
+            // Tentar fazer parse JSON, mas aceitar resposta vazia
+            return response.text().then(function (text) {
+              try {
+                return text ? JSON.parse(text) : { success: true };
+              } catch (e) {
+                return { success: true, data: text };
+              }
+            });
+          })
+          .then(function (responseData) {
+            resolve({
+              success: true,
+              endpoint: 'updateTicket',
+              property: propertyName,
+              data: responseData
+            });
+          })
+          .catch(function (error) {
+            console.error('❌ Erro ao atualizar propriedade ' + propertyName + ':', error);
+            resolve({
+              success: false,
+              endpoint: 'updateTicket',
+              property: propertyName,
+              message: error.message
+            });
+          });
+      });
+    },
+
+    /**
      * Finalizar negócio (descartar ou perder)
      */
     finalizarNegocio: function () {
@@ -1868,8 +1937,12 @@
       var novoStatus = this.modalState.tipoFinalizacao === 'descartar' ? '1095528872' : '1095528873';
       var motivos = this.modalState.tipoFinalizacao === 'descartar' ? this.motivosDescarte : this.motivosPerda;
 
-      // Preparar dados para N8N
-      var updateData = {
+      // Determinar nomes dos campos baseado no tipo
+      var campoMotivo = this.modalState.tipoFinalizacao === 'descartar' ? 'motivo_do_descarte' : 'motivo_da_perda';
+      var campoDetalhe = this.modalState.tipoFinalizacao === 'descartar' ? 'detalhe_o_motivo_do_descarte' : 'detalhe_o_motivo_da_perda';
+
+      // Preparar dados para updateDeal (mantém formato original)
+      var updateDealData = {
         // Dados do ticket
         ticketId: this.modalState.currentTicketId,
         dealId: this.modalState.currentDealId,
@@ -1894,20 +1967,32 @@
         timestamp: Date.now()
       };
 
-      // console.log('📤 Enviando dados para N8N:', updateData);
+      var ticketId = this.modalState.currentTicketId;
 
-      // Enviar para endpoints N8N
+      // Fazer 3 chamadas separadas ao updateTicket + 1 chamada ao updateDeal
       Promise.all([
-        this.enviarParaN8N('updateTicket', updateData),
-        this.enviarParaN8N('updateDeal', updateData)
+        // Chamada 1: Atualizar status (hs_pipeline_stage)
+        this.atualizarPropriedadeTicket(ticketId, 'hs_pipeline_stage', novoStatus),
+        // Chamada 2: Atualizar motivo (enviar o label, não a chave)
+        this.atualizarPropriedadeTicket(ticketId, campoMotivo, motivos[motivo]),
+        // Chamada 3: Atualizar detalhe do motivo
+        this.atualizarPropriedadeTicket(ticketId, campoDetalhe, descricao),
+        // Chamada 4: Atualizar deal (mantém formato original)
+        this.enviarParaN8N('updateDeal', updateDealData)
       ])
         .then(function (responses) {
           // console.log('✅ Respostas N8N:', responses);
 
-          var ticketResponse = responses[0];
-          var dealResponse = responses[1];
+          var statusResponse = responses[0];
+          var motivoResponse = responses[1];
+          var detalheResponse = responses[2];
+          var dealResponse = responses[3];
 
-          if (ticketResponse.success && dealResponse.success) {
+          // Verificar se todas as chamadas foram bem-sucedidas
+          var allTicketSuccess = statusResponse.success && motivoResponse.success && detalheResponse.success;
+          var allSuccess = allTicketSuccess && dealResponse.success;
+
+          if (allSuccess) {
             var mensagem = self.modalState.tipoFinalizacao === 'descartar' ? 
               'Negócio descartado com sucesso!' : 
               'Negócio marcado como perdido com sucesso!';
@@ -1922,9 +2007,22 @@
 
           } else {
             var errorMsg = 'Erro ao processar finalização: ';
-            if (!ticketResponse.success) errorMsg += 'Ticket - ' + ticketResponse.message + '. ';
-            if (!dealResponse.success) errorMsg += 'Deal - ' + dealResponse.message + '.';
+            var errors = [];
+            
+            if (!statusResponse.success) {
+              errors.push('Status - ' + statusResponse.message);
+            }
+            if (!motivoResponse.success) {
+              errors.push('Motivo - ' + motivoResponse.message);
+            }
+            if (!detalheResponse.success) {
+              errors.push('Detalhe - ' + detalheResponse.message);
+            }
+            if (!dealResponse.success) {
+              errors.push('Deal - ' + dealResponse.message);
+            }
 
+            errorMsg += errors.join('. ');
             self.showModalError(errorMsg);
           }
         })

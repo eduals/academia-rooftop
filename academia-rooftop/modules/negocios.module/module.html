@@ -16,6 +16,8 @@
   {% if view_contact_id %}
   console.log('👁️ Visualizando negócios do contato:', '{{view_contact_id}}');
   {% endif %}
+  // Passar view_contact_id para o módulo JavaScript (se existir)
+  window.hubspotViewContactId = {% if view_contact_id %}'{{view_contact_id}}'{% else %}null{% endif %};
 </script>
 
   <header class="bg-white shadow-sm">

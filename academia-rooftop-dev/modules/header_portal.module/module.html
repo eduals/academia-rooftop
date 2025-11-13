@@ -1,23 +1,54 @@
+<!-- Pega id do usuario na url -->
+{% set checkView_contact_id = request.query_dict.view_contact_id ||  '133645175296' %}
+
+<!-- Pega id do usuario logado -->
+{% if request_contact.is_logged_in and request.contact.contact_vid %}
+  {% set checkContact_id_logged = request.contact.contact_vid %}
+{% else %}
+  {% set checkContact_id_logged = '133645175296' %}
+{% endif %}
+
+<!-- Pega dados do usuario logado com isAdmin -->
+{% if checkContact_id_logged  %}
+  {% set contatoAdmin = crm_object('contact', checkContact_id_logged, 'admin_do_portal') %}
+  {% set LoggedUserIsAdmin = (contatoAdmin.admin_do_portal == 'Sim') %}
+  {% else %}
+  {% set LoggedUserIsAdmin = false %}
+{% endif %}
+
+
+<!-- Verificação de acesso: Se usuario logado não é admin e está tentando acessar outro ID, redireciona -->
+{% if checkView_contact_id and checkContact_id_logged != checkView_contact_id and not LoggedUserIsAdmin %}
+  <script>
+    window.location.href = '/negocios?view_contact_id={{ checkContact_id_logged }}';
+  </script>
+{% else %}
+
+<!-- ------------------------------------ -->
+
 {% set view_contact_id = request.query_dict.view_contact_id %}
-{% if view_contact_id %}
+
+{% if checkView_contact_id %}
   {% set contact_id = view_contact_id %}
-{% elif request_contact.is_logged_in and request.contact.contact_vid %}
+{% elif request.contact.contact_vid %}
   {% set contact_id = request.contact.contact_vid %}
 {% else %}
   {% set contact_id = null %}
 {% endif %}
 
-{% if request_contact.is_logged_in %}
+ {#% if request_contact.is_logged_in %#}
+{% if contact_id %}
 
-  {% set membership_contact = crm_object('contact', contact_id, 'firstname,lastname,email,foto_de_perfil,liberar_modulo_de_leads') %}
+  {% set membership_contact = crm_object('contact', contact_id, 'firstname,lastname,email,foto_de_perfil,liberar_modulo_de_leads, portal_indicadores_liberado') %}
   
-  {% if request_contact.is_logged_in  %}
+  {% if membership_contact  %}
     {# Pegando dados do contato logado #}
     {% set contact_nome = membership_contact.firstname %}
     {% set contact_sobrenome = membership_contact.lastname %}
     {% set contact_email = membership_contact.email %}
     {% set moduloLiberado = membership_contact.liberar_modulo_de_leads %}
-
+    {% set moduloIndicadoresLiberado = membership_contact.portal_indicadores_liberado %}
+    
 {#     {% set contact_imagem = request.contact %} #}
   {% else %}
     {% set contact_nome = 'Logar' %}
@@ -37,18 +68,22 @@
                 <img src="{{ module.image_field.src }}" alt="Rooftop Investimentos" class="h-10" />
               </a>
             </div>
-            <div class="sm:hidden md:block">
+            <div class="hidden md:block">
               <div class="ml-10 flex items-baseline space-x-4">
                {% for item in module.grupo_de_link %}
                   {% set isLeadsLink = item.link_label == "Acelera Master 🛫" or item.link_href.endswith("/acelera") %}
+                  {% set isIndicadoresLink = item.link_label == "Indicadores" or item.link_href.endswith("/indicadores") %}
 
-                  {% if moduloLiberado or not isLeadsLink %}
+                  {% if (isIndicadoresLink and moduloIndicadoresLiberado) 
+                        or (isLeadsLink and moduloLiberado) 
+                        or (not isLeadsLink and not isIndicadoresLink) %}
                     <a href="{{ item.link_href }}?view_contact_id={{ contact_id }}" 
                        {% if item.link_ancora %}data-ancora="{{ item.link_ancora }}"{% endif %} 
                        class="rounded-md px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 hover:text-white {% if item.is_current %}bg-blue-900 text-white{% endif %}">
                       {{ item.link_label }}
                     </a>
                   {% endif %}
+
                 {% endfor %}
                 
                 {#% for item in module.grupo_de_link %}
@@ -58,7 +93,7 @@
             </div>
 
             <!-- Dados do Franqueado -->
-            <div class="sm:hidden md:block ml-6">
+            <div class="hidden md:block ml-6">
               <div id="franqueado-info" class="text-white text-xs leading-tight">
                 <p class="mb-1">
                   <span class="font-semibold">Empresa:</span>
@@ -71,7 +106,7 @@
               </div>
             </div>
           </div>
-          <div class="sm:hidden md:block">
+          <div class="hidden md:block">
             <div class="ml-4 flex items-center md:ml-6">
               <!-- <button type="button" class="relative rounded-full bg-blue-800 p-1 text-white hover:text-blue-200 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-800 focus:outline-hidden">
                 <span class="absolute -inset-1.5"></span>
@@ -128,13 +163,17 @@
             {# Mostra o link se:
                - O módulo de Leads está liberado (mostra tudo) OU
                - Este NÃO é um link de Leads (mostra outros links sempre) #}
-            {% if moduloLiberado or not isLeadsLink %}
+            {% if (isIndicadoresLink and moduloIndicadoresLiberado) 
+                  or (isLeadsLink and moduloLiberado) 
+                  or (not isLeadsLink and not isIndicadoresLink) %}
               <a href="{{ item.link_href }}?view_contact_id={{ contact_id }}" 
                  {% if item.link_ancora %}data-ancora="{{ item.link_ancora }}"{% endif %} 
                  class="block rounded-md px-3 py-2 text-base font-medium text-white hover:bg-blue-700 hover:text-white {% if item.is_current %}bg-blue-900 text-white{% endif %}">
                 {{ item.link_label }}
               </a>
             {% endif %}
+
+            
           {% endfor %}
         </div>
         
@@ -234,5 +273,7 @@
   
   {% else %}
   
+
+{% endif %}
 
 {% endif %}

@@ -122,47 +122,71 @@
           console.log('🕐 Primeiro item do payload:', item);
           console.log('🕐 dealInfo:', item.dealInfo);
           console.log('🕐 dealProperties:', item.dealProperties);
+          console.log('🕐 contactProperties:', item.contactProperties);
         }
         
-        // Validação detalhada
-        var hasContactInfo = item.contactInfo !== null && item.contactInfo !== undefined;
         // Priorizar dealProperties (tem mais campos) sobre dealInfo
         var dealData = item.dealProperties || item.dealInfo;
-        var hasDealInfo = dealData !== null && dealData !== undefined;
-        var contactInfoType = typeof item.contactInfo;
-        var dealInfoType = typeof dealData;
-        var contactInfoIsObject = hasContactInfo && typeof item.contactInfo === 'object' && !Array.isArray(item.contactInfo);
-        var dealInfoIsObject = hasDealInfo && typeof dealData === 'object' && !Array.isArray(dealData);
-
-        if (item.contactInfo && dealData) {
+        
+        // Tentar obter dados do contato de múltiplas fontes
+        // 1. contactInfo (preferencial)
+        // 2. contactProperties (fallback)
+        // 3. dealProperties/dealInfo (último recurso)
+        var contactData = item.contactInfo || item.contactProperties || {};
+        
+        // Verificar se temos dados mínimos para processar
+        // Precisamos de pelo menos dealData e contactVid
+        if (dealData && item.contactVid) {
+          // Extrair nome de múltiplas fontes
+          var nomeCompleto = '';
+          var firstname = '';
+          var lastname = '';
+          
+          if (contactData.nomeCompleto) {
+            nomeCompleto = contactData.nomeCompleto;
+            var nomeParts = nomeCompleto.split(' ');
+            firstname = nomeParts[0] || '';
+            lastname = nomeParts.slice(1).join(' ') || '';
+          } else if (contactData.firstname || contactData.lastname) {
+            firstname = contactData.firstname || '';
+            lastname = contactData.lastname || '';
+            nomeCompleto = (firstname + ' ' + lastname).trim();
+          } else if (dealData.nome || dealData.dealname) {
+            // Fallback: usar nome do deal
+            nomeCompleto = dealData.nome || dealData.dealname || '';
+            var dealNomeParts = nomeCompleto.split(' ');
+            firstname = dealNomeParts[0] || '';
+            lastname = dealNomeParts.slice(1).join(' ') || '';
+          }
+          
           var extractedContact = {
             // IDs
             dealId: item.dealId,
             vid: item.contactVid,
             // MQL
             isMQL: item.isMQL || item.ismql || false,
-            // Dados do contato
-            email: item.contactInfo.email || '',
-            phone: item.contactInfo.phone || '',
-            firstname: item.contactInfo.firstname || '',
-            lastname: item.contactInfo.lastname || '',
-            nomeCompleto: item.contactInfo.nomeCompleto || '',
+            // Dados do contato - tentar múltiplas fontes
+            email: contactData.email || '',
+            phone: contactData.phone || dealData.telefone_do_contato || '',
+            firstname: firstname,
+            lastname: lastname,
+            nomeCompleto: nomeCompleto,
             // Datas do DEAL (não do contato) - usar dealData que pode ser dealInfo ou dealProperties
-            createdate: dealData.dataCriacao || dealData.createdate || '',
+            createdate: dealData.dataCriacao || dealData.createdate || dealData.hs_createdate || '',
             lastmodifieddate: dealData.lastmodifieddate || dealData.hs_lastmodifieddate || '',
-            // Endereço
-            address: item.contactInfo.address || '',
-            city: item.contactInfo.city || '',
-            state: item.contactInfo.state || '',
-            zip: item.contactInfo.zip || '',
-            complemento: item.contactInfo.complemento || '',
-            // Imóvel
-            tipo_de_imovel: item.contactInfo.tipo_de_imovel || '',
-            valor_do_imovel: item.contactInfo.valor_do_imovel || '',
-            // Objetivos
-            objetivo_principal: item.contactInfo.objetivo_principal || '',
-            objetivo_secundario: item.contactInfo.objetivo_secundario || '',
-            solucao_procurada: item.contactInfo.solucao_procurada || '',
+            // Endereço - tentar contactData primeiro, depois dealData
+            address: contactData.address || dealData.qual_o_endereco_completo_do_imovel_ || dealData.endereco_imovel || '',
+            city: contactData.city || dealData.em_qual_cidade_fica_localizado_o_imovel_ || dealData.cidade_imovel || '',
+            state: contactData.state || dealData.estado || '',
+            zip: contactData.zip || dealData.cep || '',
+            complemento: contactData.complemento || dealData.complemento_do_endereco || '',
+            // Imóvel - tentar contactData primeiro, depois dealData
+            tipo_de_imovel: contactData.tipo_de_imovel || dealData.tipo_de_imovel || '',
+            valor_do_imovel: contactData.valor_do_imovel || dealData.qual_a_faixa_de_valor_do_seu_imovel_ || '',
+            // Objetivos - tentar contactData primeiro, depois dealData
+            objetivo_principal: contactData.objetivo_principal || dealData.qual_o_seu_principal_objetivo_ || '',
+            objetivo_secundario: contactData.objetivo_secundario || '',
+            solucao_procurada: contactData.solucao_procurada || '',
             // Lead Portal Franqueado - usar dealData que pode ser dealInfo ou dealProperties
             lead_portal_franqueado: dealData.lead_portal_franqueado || '',
             lead_portal_franqueado___tipo: dealData.lead_portal_franqueado___tipo || 'Bônus',
@@ -175,36 +199,44 @@
             console.log('🕐 Contato extraído (primeiro):', extractedContact);
             console.log('🕐 lead_portal_franqueado_ate extraído:', extractedContact.lead_portal_franqueado_ate);
             console.log('🕐 dealData usado:', dealData);
-            console.log('🕐 dealData.lead_portal_franqueado_ate:', dealData.lead_portal_franqueado_ate);
+            console.log('🕐 contactData usado:', contactData);
           }
 
           contacts.push(extractedContact);
         } else {
           var reason = [];
-          if (!hasContactInfo) {
-            reason.push('contactInfo é null/undefined');
-          } else if (!contactInfoIsObject) {
-            reason.push('contactInfo não é objeto válido (tipo: ' + contactInfoType + ')');
-          }
-          if (!hasDealInfo) {
+          if (!dealData) {
             reason.push('dealInfo/dealProperties é null/undefined');
-          } else if (!dealInfoIsObject) {
-            reason.push('dealInfo/dealProperties não é objeto válido (tipo: ' + dealInfoType + ')');
+          }
+          if (!item.contactVid) {
+            reason.push('contactVid é null/undefined');
           }
 
           var skippedItem = {
             index: index,
             dealId: item.dealId,
             contactVid: item.contactVid,
-            reason: reason.join(' | '),
+            reason: reason.join(' | ') || 'Dados insuficientes',
             contactInfo: item.contactInfo,
+            contactProperties: item.contactProperties,
             dealInfo: item.dealInfo,
             dealProperties: item.dealProperties
           };
 
           skippedItems.push(skippedItem);
+          
+          // Log de itens pulados para debug
+          if (index === 0) {
+            console.warn('⚠️ Item pulado:', skippedItem);
+          }
         }
       });
+
+      // Log final para debug
+      console.log('📊 Total de contatos extraídos:', contacts.length);
+      if (skippedItems.length > 0) {
+        console.warn('⚠️ Total de itens pulados:', skippedItems.length);
+      }
 
       return contacts;
     },

@@ -70,6 +70,39 @@
 
 ---
 
+## Reordenação e Ajustes no Funil de Negócios
+
+### Reordenação das Etapas do Funil
+- **✅ Ordem corrigida para ambos os fluxos**: A etapa "Avaliação do imóvel (comitê interno)" agora aparece **antes** de "Pré Análise e Due Diligence" em ambos os fluxos (< 2M e >= 2M)
+- **✅ Etapa "Avaliação do imóvel (comitê interno)" no fluxo >= 2M**: A etapa agora aparece corretamente no funil para imóveis acima de R$ 2 milhões, mantendo a mesma posição relativa que no fluxo < 2M
+- **✅ Ordem do "Pedido de Contraproposta"**: No fluxo < 2M, a etapa "Pedido de Contraproposta do cliente" agora aparece **depois** de "Proposta disponível para apresentação", refletindo o fluxo correto do processo
+
+### Nova Opção no Modal de Apresentação
+- **✅ Opção "Solicitar contraproposta"**: Adicionada nova opção no modal "Resultado da apresentação" para fluxo < 2M
+- **Redirecionamento automático**: Ao selecionar esta opção, o sistema redireciona automaticamente para a etapa "Pedido de Contraproposta do cliente"
+- **Disponibilidade condicional**: A opção só aparece para imóveis com valor médio das amostras menor que R$ 2 milhões
+
+### Lógica de Blur nos Valores de Avaliação
+- **✅ Card sempre visível**: O card "Valores de Avaliação pós comitê interno" permanece sempre visível, mas os valores e o link ficam com blur quando necessário
+- **Fluxo < 2M**: O blur é removido quando:
+  - O negócio chega na etapa "Proposta disponível para apresentação" **E**
+  - Existe link da apresentação (`linkApresentacao`)
+- **Fluxo >= 2M**: O blur é removido quando:
+  - O negócio chega na etapa "Proposta Comitê Investidor" **E**
+  - Existe link da proposta final do comitê investidor (`linkPropostaFinalComite`)
+- **Proteção de informações**: Se não houver link da apresentação, os valores permanecem com blur mesmo que estejam preenchidos, garantindo que apenas informações com proposta disponível sejam visualizadas
+
+### Separação de Seções
+- **✅ "Valores de Avaliação pós comitê interno"**: Controlado pela etapa "Proposta disponível para apresentação" (fluxo < 2M) ou "Proposta Comitê Investidor" (fluxo >= 2M)
+- **✅ "Resumo da Aprovação pós comitê investidor"**: Controlado pela etapa "Proposta Comitê Investidor" em ambos os fluxos, refletindo que esta seção é específica do comitê investidor
+
+### Melhorias na Experiência do Usuário
+- **Fluxo mais claro**: A ordem das etapas agora reflete melhor a sequência real do processo de avaliação e aprovação
+- **Informações no momento certo**: Os valores só ficam visíveis quando a proposta correspondente está disponível, evitando confusão
+- **Acesso facilitado**: Nova opção no modal permite solicitar contraproposta diretamente após a apresentação, agilizando o processo
+
+---
+
 ## Em Estudo / Próximas Implementações
 
 ### Visualização Organizada de Múltiplas Propostas

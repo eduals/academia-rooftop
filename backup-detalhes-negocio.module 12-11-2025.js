@@ -1,12 +1,52 @@
+
+
 // Módulo de Detalhes do Negócio - HomeCash Rooftop
 (function() {
   'use strict';
   
+  console.log('v2.0.0')
+
   var module = {
     selectedPhotoFiles: null,
     modalPhotos: [],
     currentModalPhotoIndex: 0,
-    
+    isDocumentosComplementaresCreated: false,
+
+    // Mapeamento dos motivos de descarte (quando imóvel não está dentro dos parâmetros)
+    motivosDescarte: {
+      'politica_regiao': 'Política de região',
+      'politica_cep': 'Política de CEP',
+      'politica_valor': 'Política de valor',
+      'politica_padrao_construtivo': 'Política de padrão construtivo',
+      'politica_tipo_imovel': 'Política de tipo de imóvel',
+      'documentacao_irregular': 'Imóvel com documentação irregular',
+      'lead_duplicado': 'Lead Duplicado',
+      'recusado_comite_interno': 'Recusado - Comitê interno',
+      'recusado_comite_investidor': 'Recusado - Comitê investidor',
+      'recusado_analise_renda': 'Recusado - Análise de renda',
+      'recusado_juridico': 'Recusado - Jurídico',
+      'recusado_analise_proprietario': 'Recusado - Análise do proprietário',
+      'pediu_descartar': 'Pediu para descartar'
+    },
+
+    // Mapeamento dos motivos de perda (quando cliente não quer seguir)
+    motivosPerda: {
+      'valor_avaliacao': 'Valor de avaliação',
+      'valor_aluguel': 'Valor do aluguel',
+      'valor_liquidez': 'Valor de liquidez',
+      'prazo_recompra': 'Prazo de recompra',
+      'sem_necessidade_imediata': 'Sem necessidade imediata - Interessado',
+      'produtos_mercado_venda': 'Produtos de mercado - Venda do imóvel',
+      'produtos_mercado_emprestimo': 'Produtos de mercado - Empréstimo',
+      'produtos_mercado_outros': 'Produtos de mercado - Outros',
+      'influencias_familiares': 'Influências familiares',
+      'contato_sem_sucesso': 'Contato sem sucesso',
+      'contato_parou_responder': 'Contato parou de responder',
+      'nao_informou': 'Não informou o motivo',
+      'negativo_sem_interesse': 'Negativo - Sem interesse',
+      'pediu_descartar': 'Pediu para descartar'
+    },
+
     // Helper function para mostrar toasts
     showToast: function(message, type) {
       var backgroundColor = '#10b981'; // success (green)
@@ -127,63 +167,120 @@
 
     renderNegocioDetails: function(data) {
       if (!this.contentEl) return;
-      var html = this.generateNegocioHTML(data);
-      this.contentEl.innerHTML = html;
-      this.hideAllSections();
-      this.contentEl.style.display = 'block';
 
-      // Inicializa a galeria de fotos após a renderização
-      this.getFotosInfo(data.ticket);
+      var self = this;
+      var ticketId = data.ticket ? data.ticket.hs_object_id : null;
+
+      // Buscar histórico de propostas se houver ticketId
+      if (ticketId) {
+        this.fetchPropostaHistory(ticketId)
+          .then(function(historicoPropostas) {
+            // Armazenar histórico no objeto data
+            data.historicoPropostas = historicoPropostas;
+
+            // Renderizar HTML com histórico
+            var html = self.generateNegocioHTML(data);
+            self.contentEl.innerHTML = html;
+            self.hideAllSections();
+            self.contentEl.style.display = 'block';
+
+            // Inicializa a galeria de fotos após a renderização
+            self.getFotosInfo(data.ticket);
+
+            // Inicializa a lista de documentos complementares
+            function waitForDocuments() {
+              
+              if (self.isDocumentosComplementaresCreated && document.getElementById('documents-list')) {
+                console.log('entrou no render')
+                self.renderDocumentsList();
+              } else {
+                setTimeout(waitForDocuments, 300);
+              }
+            }
+            waitForDocuments();
+          });
+      } else {
+        // Renderizar sem histórico se não houver ticketId
+        var html = this.generateNegocioHTML(data);
+        this.contentEl.innerHTML = html;
+        this.hideAllSections();
+        this.contentEl.style.display = 'block';
+
+        this.getFotosInfo(data.ticket);
+
+        function waitForDocuments() {
+          console.log('waiting')
+          if (self.isDocumentosComplementaresCreated && document.getElementById('documents-list')) {
+            self.renderDocumentsList();
+          } else {
+            setTimeout(waitForDocuments, 200);
+          }
+        }
+        waitForDocuments();
+      }
     },
     
     // =================================================================================
     // NOVA FUNÇÃO DE RENDERIZAÇÃO PRINCIPAL
     // =================================================================================
     generateNegocioHTML: function(data) {
-        const { negocio, ticket, ticketPortal } = data;
+        const { negocio, ticket, ticketPortal, historicoPropostas } = data;
         const ticketStatus = this.getTicketStatusInfo(ticketPortal ? ticketPortal.hs_pipeline_stage : null);
         const proponentes = this.getProponentesInfo(ticket);
-
+        this.isDocumentosComplementaresCreated = true;
+        console.log('Prioridade carregada', ticket.hs_ticket_priority)
         return `
             <!-- Cabeçalho da Página -->
             <header class="mb-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <button onclick="window.history.back()" class="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors font-semibold">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                            Voltar
-                        </button>
+                        
                         <h1 class="text-3xl font-bold text-slate-900 mt-2">${negocio.dealname || 'Detalhes do Negócio'}</h1>
-                        <span class="badge ${ticketStatus.colorClass} mt-2">${ticketStatus.label}</span>
+                        <div class="flex items-center gap-2 mt-2">
+                            <div
+                              class="inline-block cursor-pointer hover:opacity-80 transition-opacity"
+                              data-priority-cell-header
+                              data-ticket-id="${ticket ? ticket.hs_object_id : ''}"
+                              data-priority="${ticket ? ticket.hs_ticket_priority : 'MEDIUM'}"
+                              onclick="event.stopPropagation(); window.negocioDetalheModule.abrirEdicaoPrioridadeHeader(this, event)"
+                              title="Clique para editar a prioridade"
+                            >
+                                ${this.getPriorityBadgeHTML(ticket ? ticket.hs_ticket_priority : null)}
+                            </div>
+                            <span class="badge ${ticketStatus.colorClass} text-sm">${ticketStatus.label}</span>
+                        </div>
                     </div>
-                   <!-- <div class="flex items-center gap-3">
+                    
+                    <!-- <div class="flex items-center gap-3">
                         <button onclick="window.negocioDetalheModule.openRegistrarAtividade()" class="btn btn-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
                             Registrar Atividade
                         </button>
-                    </div>  -->
+                    </div>
+                    -->  
                 </div>
             </header>
 
             <!-- Layout Principal -->
-            <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 pb-10">
                 
                 <!-- Coluna Principal (Esquerda) -->
                 <div class="lg:col-span-2 space-y-6">
-                    ${this.generateProgressStepper(ticketPortal)}
+                    ${this.generateProgressStepper(ticketPortal, negocio, ticket)}
                     ${this.generatePropertyCard(negocio, ticket)}
                     ${this.generateDetailsCard(negocio, ticket)}
                     ${this.generateDocumentsCard(ticket)}
                     ${this.generateOwnerAnalysisCard(ticket)}
-                    ${this.generateApprovalCard(ticket)}
                 </div>
 
                 <!-- Coluna Lateral (Direita) -->
                 <div class="space-y-6">
                     ${this.generateContactCard(negocio)}
                     ${this.generateProponentsCard(proponentes)}
-                    ${this.generateValuationCard(ticket)}
+                    ${this.generateValuesApprovalCard(ticket, historicoPropostas)}
+                    
                     ${this.generatePhotoCard(ticket)}
+                    ${this.generateDocumentsCardFiles(ticket)}
                 </div>
             </main>
 
@@ -192,6 +289,7 @@
             ${this.generatePhotoModalHTML()}
             ${this.generateSolicitarReajusteModalHTML()}
             ${this.generateUploadPhotoModalHTML()}
+            ${this.generateUploadDocumentsModalHTML()}
         `;
     },
 
@@ -199,14 +297,89 @@
     // FUNÇÕES GERADORAS DE COMPONENTES PARA O NOVO LAYOUT
     // =================================================================================
     
-      generateProgressStepper: function(ticketPortal) {
+      generateProgressStepper: function(ticketPortal, negocio, ticket) {
         if (!ticketPortal || !ticketPortal.hs_pipeline_stage) return '';
-        const progress = this.getFunnelProgress(ticketPortal.hs_pipeline_stage);
+        const progress = this.getFunnelProgress(ticketPortal.hs_pipeline_stage, ticketPortal);
         const steps = progress.steps;
         const currentIndex = progress.currentIndex;
-        if (currentIndex < 0) return '';
+
+        // 🔴 LOG DE DEBUG: Identificar quando currentIndex não é encontrado
+        if (currentIndex < 0) {
+          console.error('❌ [ERRO CRÍTICO] currentIndex não encontrado!', {
+            currentStageId: ticketPortal.hs_pipeline_stage,
+            steps: steps.map(s => ({ id: s.id, label: s.label, combinedIds: s.combinedIds })),
+            ticketData: ticketPortal
+          });
+
+          // Fallback: Exibir mensagem de erro amigável ao usuário
+          const statusInfo = this.getTicketStatusInfo(ticketPortal.hs_pipeline_stage);
+          return `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+              <div class="flex items-start">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-yellow-800">Etapa não mapeada no funil</h3>
+                  <p class="mt-2 text-sm text-yellow-700">
+                    A etapa atual "<strong>${statusInfo.label}</strong>" (ID: ${ticketPortal.hs_pipeline_stage}) não está mapeada corretamente no funil de progresso.
+                    Entre em contato com o suporte técnico.
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Verificar faixa de valor do imóvel para avaliação externa
+        // const faixaValorRaw = negocio?.qual_a_faixa_de_valor_do_seu_imovel_;
+        // const faixaValor = this.safeGetArrayValue(faixaValorRaw) || '';
+
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Campo média das amostras Q14 (raw):', ticket.valor_medio_amostras);
+
+        // Converter valor formatado (R$ 2.000.000,01) para número
+        // Primeiro remover R$ e espaços, depois converter
+        const valorLimpo = ticket.valor_medio_amostras ? String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+        const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Valor médio convertido:', valorMedioAmostrasNumero);
+
+        // Faixas que podem incluir valores acima de R$ 2.000.000
+        const precisaAvaliacaoExterna = valorMedioAmostrasNumero > 2000000;
+        // const precisaAvaliacaoExterna =
+        //     faixaValor.includes('1 milhão a R$ 3 milhões') ||
+        //     faixaValor.includes('3 milhões a R$ 6 milhões') ||
+        //     faixaValor.includes('De R$ 1 milhão a R$ 3 milhões') ||
+        //     faixaValor.includes('De R$ 3 milhões a R$ 6 milhões');
+
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Precisa avaliação?', precisaAvaliacaoExterna);
+
+        // Verificar se já existe upload_do_laudo (avaliação já realizada)
+        const avaliacaoJaRealizada = ticket?.upload_do_laudo && ticket.upload_do_laudo.trim() !== '';
+
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Avaliação já realizada?', avaliacaoJaRealizada);
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Link:', ticket?.upload_do_laudo);
+
+        // Verificar se segunda proposta foi liberada
+        const segundaPropostaLiberada = ticket?.segunda_proposta_liberada === 'Sim' || ticket?.segunda_proposta_liberada === true;
+
+        console.log('🏠 [AVALIAÇÃO EXTERNA - Progress] Segunda proposta liberada?', segundaPropostaLiberada);
+        // TODO: remover console.log do ticket
+        console.log('ticketticketticket', ticketPortal)
+        // ⚠️ WARN DE AVALIAÇÃO EXTERNA MOVIDO PARA O NEXTSTEPINFO
+        // A lógica de exibição do warn agora está dentro da função getNextStepInfo()
+        // na etapa "Avaliação externa" ao invés de no topo do progress stepper
+
+        // Determinar se é Fluxo 2 (acima de R$2M) para renomear "Segunda proposta cliente"
+        const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
 
         const stepsHTML = steps.map((step, index) => {
+            // Renomear "Segunda proposta cliente" para "Proposta Comitê Investidor" quando isFluxo2 === true
+            let stepLabel = step.label;
+            if (isFluxo2 && step.id === '1208820114' && step.label === 'Segunda proposta cliente') {
+                stepLabel = 'Proposta Comitê Investidor';
+            }
             const isCompleted = index < currentIndex;
             const isCurrent = index === currentIndex;
             const isFuture = index > currentIndex;
@@ -224,13 +397,13 @@
 
             if (isCompleted) {
                 // Verificar se há data de conclusão para determinar a cor
-                const completionDate = this.getStepCompletionDate(step.id, ticketPortal);
+                const completionDate = this.getStepCompletionDate(step.id, ticketPortal, ticketPortal.hs_pipeline_stage);
                 const hasCompletionDate = !!completionDate;
-                
+                console.log('hasCompletionDate', hasCompletionDate, completionDate)
+                statusClass = 'text-green-700';
+                ringClass = 'bg-green-100';
                 if (hasCompletionDate) {
                     // Etapa com data - cor verde
-                    statusClass = 'text-green-700';
-                    ringClass = 'bg-green-100';
                 } else {
                     // Etapa sem data - cor cinza
                     statusClass = 'text-gray-600';
@@ -250,26 +423,28 @@
             
             if (isCompleted) {
                 // Etapa concluída - mostrar data de conclusão dinâmica
-                const completionDate = this.getStepCompletionDate(step.id, ticketPortal);
+                const completionDate = this.getStepCompletionDate(step.id, ticketPortal, ticketPortal.hs_pipeline_stage);
+                console.log('completionDate: ', step.id , ' > ',  step.label, ' >>> VALOR:', completionDate, 'TIPO:', typeof completionDate);
                 const hasCompletionDate = !!completionDate;
                 const titleColor = hasCompletionDate ? 'text-green-600' : 'text-gray-600';
+                // const titleColor = true ? 'text-green-600' : 'text-gray-600';
                 const dateText = completionDate ? `Concluído em ${completionDate}` : 'Data de conclusão não disponível';
                 content = `
                     <div class="pt-1 ml-4">
-                        <p class="font-semibold ${titleColor}">${step.label}</p>
+                        <p class="font-semibold ${titleColor}">${stepLabel}</p>
                         <p class="text-sm text-slate-500">${dateText}</p>
                     </div>
                 `;
             } else if (isCurrent) {
                 // Etapa atual - mostrar com animação e próximo passo
-                const nextStepInfo = this.getNextStepInfo(step.label, ticketPortal);
+                const nextStepInfo = this.getNextStepInfo(stepLabel, ticketPortal);
                 content = `
                     <div>
-                        <p class="font-semibold text-blue-600">${step.label}</p>
+                        <p class="font-semibold text-blue-600">${stepLabel}</p>
                         <p class="text-sm text-slate-500">Você está nesta etapa.</p>
                         ${nextStepInfo ? `
                             <div class="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                <p class="text-sm font-medium text-slate-700">Próximo passo:</p>
+                                <p class="text-sm font-medium text-slate-700">${stepLabel === 'Descartado' || stepLabel === 'Perdido' ? 'Motivo do descarte:' : 'Próximo passo:'}</p>
                                 <p class="text-sm text-slate-500 mb-3">${nextStepInfo.description}</p>
                                 ${nextStepInfo.actionButton || ''}
                             </div>
@@ -280,7 +455,7 @@
                 // Etapa futura
                 content = `
                     <div class="pt-1 ml-4">
-                        <p class="font-semibold text-slate-800">${step.label}</p>
+                        <p class="font-semibold text-slate-800">${stepLabel}</p>
                     </div>
                 `;
             }
@@ -327,7 +502,7 @@
                         ${stepsHTML}
                     </ol>
                 </div>
-                
+
                 ${expandButton}
             </div>
         `;
@@ -350,7 +525,7 @@
                     </button>
                 `
             },
-            'Visita marcada': {
+            '1ª Visita marcada': {
                 description: function(ticketData) {
                     // Buscar informações da visita se disponível
                     var ticketId = ticketData ? ticketData.hs_object_id : null;
@@ -391,7 +566,7 @@
                     `;
                 }
             },
-            'Visita realizada - Aguardando documentação': {
+            '1ª Visita realizada - Aguardando documentação': {
                 description: 'Enviar documentação necessária (mínimo de 3 documentos).',
                 actionButton: `
                     <div class="flex flex-col sm:flex-row gap-2">
@@ -411,76 +586,619 @@
                 `
             },
             'Aguardando documentos complementares': {
-                description: 'Enviar os documentos complementares solicitados pelo backoffice.',
-                actionButton: `
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <button onclick="window.negocioDetalheModule.openUploadDocumentModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-lg shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-2-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                            </svg>
-                            Enviar Documentos Complementares
-                        </button>
-                        <button onclick="window.negocioDetalheModule.confirmarDocumentosComplementares()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-yellow-700 bg-white border border-yellow-300 rounded-lg shadow-sm hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                            Confirmar Envio
-                        </button>
-                    </div>
-                `
+                description: function(ticketData) {
+                    // Buscar documentos pendentes ou rejeitados
+                    if (!window.negocioDetalheModule) return 'Enviar os documentos complementares solicitados pelo backoffice.';
+
+                    const documentos = window.negocioDetalheModule.getDocumentosInfo(ticketData);
+                    const pendentes = documentos.filter(doc =>
+                        doc.status === 'warning' || doc.status === 'missing' || doc.status === 'under_review'
+                    );
+
+                    if (pendentes.length > 0) {
+                        const listaHTML = pendentes.map(doc => {
+                            const statusText = doc.status === 'warning' ? 'Rejeitado' :
+                                             doc.status === 'missing' ? 'Faltando' : 'Em Análise';
+                            const statusColor = doc.status === 'warning' ? 'text-red-700' :
+                                              doc.status === 'missing' ? 'text-slate-600' : 'text-blue-700';
+
+                            return `<li class="flex items-start py-1">
+                                <svg class="h-4 w-4 mt-0.5 mr-2 flex-shrink-0 ${statusColor}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <div class="flex-1">
+                                    <span class="text-sm font-medium text-slate-800">${doc.nome}</span>
+                                    ${doc.notes ? `<p class="text-xs ${statusColor} mt-0.5">${doc.notes}</p>` : `<span class="text-xs ${statusColor}"> - ${statusText}</span>`}
+                                </div>
+                            </li>`;
+                        }).join('');
+
+                        return `
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                                <div class="flex items-start mb-2">
+                                    <svg class="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                    </svg>
+                                    <p class="text-sm font-semibold text-yellow-800">
+                                        Documentos Pendentes (${pendentes.length})
+                                    </p>
+                                </div>
+                                <ul class="space-y-1 ml-7">
+                                    ${listaHTML}
+                                </ul>
+                            </div>
+                            <p class="text-sm text-slate-600">
+                                Envie ou corrija os documentos listados acima conforme solicitado pelo backoffice.
+                            </p>
+                        `;
+                    }
+
+                    return 'Enviar os documentos complementares solicitados pelo backoffice.';
+                },
+                actionButton: function(ticketData) {
+                    if (!window.negocioDetalheModule) {
+                        return `
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <button onclick="window.negocioDetalheModule.openUploadDocumentModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-lg shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-2-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    Enviar Documentos Complementares
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    const documentos = window.negocioDetalheModule.getDocumentosInfo(ticketData);
+                    const pendentes = documentos.filter(doc =>
+                        doc.status === 'warning' || doc.status === 'missing'
+                    );
+
+                    if (pendentes.length > 0) {
+                        const documentosHTML = pendentes.map(doc => {
+                            const statusBadge = doc.status === 'warning' ?
+                                '<span class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Rejeitado</span>' :
+                                '<span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">Faltando</span>';
+
+                            return `
+                                <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 hover:border-yellow-400 transition-colors">
+                                    <div class="flex-1 min-w-0 mr-3">
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-xs font-medium text-slate-700 truncate">${doc.nome}</p>
+                                            ${statusBadge}
+                                        </div>
+                                        ${doc.notes ? `<p class="text-xs text-amber-600 mt-0.5 line-clamp-2">${doc.notes}</p>` : ''}
+                                    </div>
+                                    <button onclick="window.negocioDetalheModule.uploadDocument('${doc.id}')"
+                                            class="flex-shrink-0 inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-300 rounded hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-2-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                        Upload
+                                    </button>
+                                </div>
+                            `;
+                        }).join('');
+
+                        return `
+                            <div class="space-y-2">
+                                <p class="text-xs font-medium text-slate-600 mb-2">Documentos que precisam de atenção:</p>
+                                ${documentosHTML}
+                                <button onclick="window.negocioDetalheModule.confirmarDocumentosComplementares()"
+                                        class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-lg shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 mt-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    Confirmar Envio de Todos os Documentos
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="flex flex-col gap-2">
+                            <button onclick="window.negocioDetalheModule.openUploadDocumentModal()" class="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-lg shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-2-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Enviar Documentos Complementares
+                            </button>
+                            <button onclick="window.negocioDetalheModule.confirmarDocumentosComplementares()" class="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-yellow-700 bg-white border border-yellow-300 rounded-lg shadow-sm hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Confirmar Envio
+                            </button>
+                        </div>
+                    `;
+                }
             },
-            'Apresentação da proposta': {
-                description: 'Realizar apresentação da proposta ao cliente.',
-                actionButton: `
-                    <button onclick="window.negocioDetalheModule.openApresentacaoRealizadaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
-                        </svg>
-                        Apresentação Realizada
-                    </button>
-                `
+            'Avaliação externa': {
+                description: function(ticketData) {
+                    try {
+                        console.log('TicketData >> ', ticketData);
+
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação já foi realizada (tem link do laudo)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo &&
+                                                     typeof ticketData.upload_do_laudo === 'string' &&
+                                                     ticketData.upload_do_laudo.trim() !== '';
+
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação foi solicitada
+                        let avaliacaoSolicitada = false;
+
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            // Verificar se é array e tem elementos
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa[0] === true;
+                            }
+                            // Se não for array, verificar diretamente o valor
+                            else if (typeof ticketData.solicitar_avaliacao_externa === 'string' ||
+                                     typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa === true;
+                            }
+                        }
+
+                        // Converter e verificar se precisa de avaliação externa
+                        const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                        const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+                        const precisaAvaliacaoExterna = valorMedioAmostrasNumero >= 2000000;
+
+                        // Caso 1: Avaliação já realizada (tem laudo)
+                        if (avaliacaoJaRealizada) {
+                            return `
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-green-800">Avaliação Externa Concluída</p>
+                                            <p class="text-sm text-green-700 mt-1">
+                                                A avaliação externa do imóvel foi realizada. O laudo está disponível para consulta.
+                                            </p>
+                                            <p class="text-sm text-green-700 mt-1">
+                                                Nosso time está trabalhando para liberar a proposta para consulta.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Caso 2: Avaliação solicitada mas ainda sem laudo (em progresso)
+                        if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                            return `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-blue-800">Avaliação Externa em Progresso</p>
+                                            <p class="text-sm text-blue-700 mt-1">
+                                                A solicitação de avaliação externa foi realizada. Em breve você será notificado quando ela for concluída.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Caso 3: Precisa de avaliação mas ainda não foi solicitada
+                        if (precisaAvaliacaoExterna) {
+                            let mensagemFaixa = '';
+                            if (valorMedioAmostrasNumero > 3000000) {
+                                mensagemFaixa = 'Este imóvel está na faixa de <strong>R$ 3 milhões a R$ 6 milhões</strong> e requer avaliação externa obrigatória.';
+                            } else if (valorMedioAmostrasNumero > 2000000) {
+                                mensagemFaixa = 'Imóveis com valor superior a <strong>R$ 2.000.000,00</strong> nesta faixa requerem avaliação externa obrigatória.';
+                            } else {
+                                mensagemFaixa = 'Este imóvel pode requerer avaliação externa obrigatória por causa do valor médio das amostras.';
+                            }
+
+                            return `
+                                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <div class="flex items-start">
+                                        <svg class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-amber-800">Avaliação Externa Necessária</p>
+                                            <p class="text-sm text-amber-700 mt-1">
+                                                ${mensagemFaixa}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        // Caso padrão: não precisa de avaliação externa
+                        return 'Solicitar avaliação externa do imóvel, se necessário.';
+
+                    } catch (error) {
+                        console.error('❌ [ERRO] Erro ao processar descrição da Avaliação Externa:', error);
+                        return 'Erro ao carregar informações da avaliação externa. Entre em contato com o suporte.';
+                    }
+                },
+                actionButton: function(ticketData) {
+                    try {
+                        console.log('ticketData', ticketData);
+
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação já foi realizada (tem link do laudo)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo &&
+                                                     typeof ticketData.upload_do_laudo === 'string' &&
+                                                     ticketData.upload_do_laudo.trim() !== '';
+
+                        // 🛡️ VALIDAÇÃO SEGURA: Verificar se a avaliação foi solicitada
+                        let avaliacaoSolicitada = false;
+
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            // Verificar se é array e tem elementos
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa[0] === true;
+                            }
+                            // Se não for array, verificar diretamente o valor
+                            else if (typeof ticketData.solicitar_avaliacao_externa === 'string' ||
+                                     typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' ||
+                                                     ticketData.solicitar_avaliacao_externa === true;
+                            }
+                        }
+                        // console.log('avaliacaoSolicitada', avaliacaoSolicitada)
+                        // Caso 1: Avaliação já realizada - mostrar botão para baixar laudo
+                        // if (avaliacaoJaRealizada) {
+                        //     return `
+                        //         <button onclick="window.negocioDetalheModule.downloadAvaliacaoExterna()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        //             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        //                 <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                        //             </svg>
+                        //             Baixar Laudo de Avaliação
+                        //         </button>
+                        //     `;
+                        // }
+
+                        if (!avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                            return `
+                                <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" class="mt-2 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Solicitar Avaliação Externa
+                                </button>
+                            `;
+                        }
+
+                        // Caso 2: Avaliação solicitada mas pendente - não mostrar botão
+                        // if (avaliacaoSolicitada && !avaliacaoJaRealizada) {
+                        return ''; // Sem botão - só a mensagem de progresso
+                        // }
+
+                        // Caso 3: Avaliação não solicitada - mostrar botão de solicitar
+
+                    } catch (error) {
+                        console.error('❌ [ERRO] Erro ao processar actionButton da Avaliação Externa:', error);
+                        return '';
+                    }
+                }
             },
-            'Negociação da proposta': {
-                description: 'Solicitar reajuste da proposta se necessário.',
+            'Proposta disponivel para apresentação': {
+                description: function(ticketData) {
+                    // Verificar valor médio das amostras
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+
+                    if (valorMedioAmostrasNumero >= 2000000) {
+                        // Verificar se já tem laudo presente (avaliação realizada)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo && typeof ticketData.upload_do_laudo === 'string' && ticketData.upload_do_laudo.trim() !== '';
+
+                        if (avaliacaoJaRealizada) {
+                            return 'Laudo de avaliação externa recebido. Agendar 2ª reunião para apresentação da proposta ao cliente.';
+                        }
+
+                        return 'Imóveis acima de R$ 2.000.000 requerem avaliação externa antes da apresentação da proposta.';
+                    }
+
+                    return 'Agendar 2ª reunião para apresentação da proposta ao cliente.';
+                },
+                actionButton: function(ticketData) {
+                    // Verificar valor médio das amostras
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+
+                    console.log('🔍 [Proposta Disponível] Valor médio:', valorMedioAmostrasNumero);
+
+                    // CENÁRIO A: valor >= R$ 2.000.000
+                    if (valorMedioAmostrasNumero >= 2000000) {
+                        // Verificar se avaliação já foi realizada (laudo presente)
+                        const avaliacaoJaRealizada = ticketData?.upload_do_laudo && typeof ticketData.upload_do_laudo === 'string' && ticketData.upload_do_laudo.trim() !== '';
+
+                        // Se laudo já está presente, mostrar botão de Agendar 2ª Visita
+                        if (avaliacaoJaRealizada) {
+                            return `
+                                <button onclick="window.negocioDetalheModule.openMarcar2aReuniaoModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clip-rule="evenodd" />
+                                    </svg>
+                                    Agendar 2ª Visita
+                                </button>
+                            `;
+                        }
+
+                        // Verificar se avaliação já foi solicitada
+                        let avaliacaoSolicitada = false;
+                        if (ticketData?.solicitar_avaliacao_externa) {
+                            if (Array.isArray(ticketData.solicitar_avaliacao_externa) && ticketData.solicitar_avaliacao_externa.length > 0) {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa[0] === 'Sim' || ticketData.solicitar_avaliacao_externa[0] === true;
+                            } else if (typeof ticketData.solicitar_avaliacao_externa === 'string' || typeof ticketData.solicitar_avaliacao_externa === 'boolean') {
+                                avaliacaoSolicitada = ticketData.solicitar_avaliacao_externa === 'Sim' || ticketData.solicitar_avaliacao_externa === true;
+                            }
+                        }
+
+                        // Se não foi solicitada e não tem laudo, mostrar botão de Solicitar Avaliação Externa
+                        if (!avaliacaoSolicitada) {
+                            return `
+                                <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Solicitar Avaliação Externa
+                                </button>
+                            `;
+                        }
+
+                        // Se já foi solicitada mas ainda não tem laudo, não mostrar botão
+                        return '';
+                    }
+
+                    // CENÁRIO B: valor < R$ 2.000.000 - Mostrar botão de Agendar 2ª Visita
+                    return `
+                        <button onclick="window.negocioDetalheModule.openMarcar2aReuniaoModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clip-rule="evenodd" />
+                            </svg>
+                            Agendar 2ª Visita
+                        </button>
+                    `;
+                }
+            },
+            '2ª Reunião marcada': {
+                description: function(ticketData) {
+                    // Buscar informações da 2ª visita se disponível
+                    var ticketId = ticketData ? ticketData.hs_object_id : null;
+                    var contactId = window.hubspotUserData ? window.hubspotUserData.contactId : null;
+
+                    if (ticketId && contactId && !window.visit2ActivitiesData) {
+                        // Buscar atividades de 2ª visita de forma assíncrona
+                        window.negocioDetalheModule.fetch2VisitMeetings(ticketId, contactId)
+                            .then(function(data) {
+                                if (data) {
+                                    window.visit2ActivitiesData = data;
+                                    // Atualizar a UI com os dados da 2ª visita
+                                    window.negocioDetalheModule.update2VisitInfo(data);
+                                }
+                            });
+                    }
+
+                    return 'Realizar apresentação da proposta ao cliente na 2ª reunião.';
+                },
+                actionButton: function(ticketData) {
+                    var baseButton = `
+                        <button onclick="window.negocioDetalheModule.openApresentacaoRealizadaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+                            </svg>
+                            Apresentação Realizada
+                        </button>
+                    `;
+
+                    // Container para informações da 2ª visita que será preenchido dinamicamente
+                    return `
+                        <div id="visit2-activities-container" class="space-y-3">
+                            <div id="visit2-info-display" class="hidden">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                            ${baseButton}
+                        </div>
+                    `;
+                }
+            },
+            'Pedido de Contraproposta do cliente': {
+                description: 'Solicitar Reajuste da proposta do (comitê investidor) se necessário.',
                 actionButton: `
                     <button onclick="window.negocioDetalheModule.openSolicitarReajusteModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
                         </svg>
-                        Solicitar Reajuste da Proposta
+                        Solicitar Reajuste da proposta do (comitê investidor)
+                    </button>
+                `
+            },
+            'Comitê investidor': {
+                description: 'Nosso time interno está avaliando o imóvel e logo você receberá uma notificação da liebração da proposta.',
+                // actionButton: `
+                //     <button onclick="window.negocioDetalheModule.openSolicitarReajusteModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                //         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                //             <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                //         </svg>
+                //         Solicitar Reajuste da proposta do (comitê investidor)
+                //     </button>
+                // `
+            },
+            'Segunda proposta cliente': {
+                description: function(ticketData) {
+                    // Verificar se é Fluxo 2 (acima de R$2M) para alterar descrição
+                    if (!ticketData) return 'Segunda proposta disponível para apresentação ao cliente.';
+                    const valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+                    const valorMedioAmostrasNumero = window.negocioDetalheModule?.parseCurrencyValue(valorLimpo) || 0;
+                    const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+                    
+                    if (isFluxo2) {
+                        return 'Proposta Comitê Investidor disponível para apresentação ao cliente.';
+                    }
+                    return 'Segunda proposta disponível para apresentação ao cliente.';
+                },
+                actionButton: `
+                    <button onclick="window.negocioDetalheModule.openResultadoSegundaPropostaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+                        </svg>
+                        Informar Resultado da Segunda Proposta
+                    </button>
+                `
+            },
+            'Proposta Comitê Investidor': {
+                description: 'Proposta Comitê Investidor disponível para apresentação ao cliente.',
+                actionButton: `
+                    <button onclick="window.negocioDetalheModule.openResultadoSegundaPropostaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+                        </svg>
+                        Informar Resultado da Proposta
                     </button>
                 `
             },
             'Reajuste da proposta': {
-                description: 'Aguarde o suporte da Rooftop entrar em contato. Caso tenha dúvidas, clique no botão abaixo.',
-                actionButton: `
-                    <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte sobre o reajuste da minha proposta', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
-                        </svg>
-                        Entrar em Contato com Suporte
-                    </button>
-                `
+                description: function(ticketData) {
+                    const segundaPropostaLiberada = ticketData?.segunda_proposta_liberada === 'Sim' || ticketData?.segunda_proposta_liberada === true;
+
+                    if (segundaPropostaLiberada) {
+                        return 'Segunda proposta disponível para apresentação ao cliente.';
+                    }
+                    return 'Aguarde o suporte da Rooftop entrar em contato. Caso tenha dúvidas, clique no botão abaixo.';
+                },
+                actionButton: function(ticketData) {
+                    const segundaPropostaLiberada = ticketData?.segunda_proposta_liberada === 'Sim' || ticketData?.segunda_proposta_liberada === true;
+
+                    if (segundaPropostaLiberada) {
+                        // Comportamento similar à "Proposta disponível para apresentação"
+                        return `
+                            <div class="flex flex-col gap-2">
+                                <button onclick="window.negocioDetalheModule.downloadProposta()" class="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    Download da Segunda Proposta
+                                </button>
+                                <button onclick="window.negocioDetalheModule.openApresentacaoSegundaPropostaModal()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+                                    </svg>
+                                    Informar Resultado da Apresentação
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    // Comportamento padrão
+                    return `
+                        <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte sobre o reajuste da minha proposta', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
+                            </svg>
+                            Entrar em Contato com Suporte
+                        </button>
+                    `;
+                }
+            },
+            'Standby': {
+                description: function(ticketData) {
+                    // Buscar informações do meeting de Standby se disponível
+                    var ticketId = ticketData ? ticketData.hs_object_id : null;
+                    var contactId = window.hubspotUserData ? window.hubspotUserData.contactId : null;
+
+                    if (ticketId && contactId && !window.standbyMeetingData) {
+                        // Buscar meeting de standby de forma assíncrona
+                        window.negocioDetalheModule.fetchStandbyMeetings(ticketId, contactId)
+                            .then(function(data) {
+                                if (data) {
+                                    window.standbyMeetingData = data;
+                                    // Atualizar a UI com os dados do meeting
+                                    window.negocioDetalheModule.updateStandbyInfo(data);
+                                }
+                            });
+                    }
+
+                    return 'Negociação pausada aguardando novo contato do cliente.';
+                },
+                actionButton: function(ticketData) {
+                    var baseButton = `
+                        <button onclick="window.negocioDetalheModule.retomarNegociacao()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                            </svg>
+                            Retomar Negociação
+                        </button>
+                    `;
+
+                    // Container para informações do standby que será preenchido dinamicamente
+                    return `
+                        <div id="standby-info-container" class="space-y-3">
+                            <div id="standby-info-display" class="hidden">
+                                <!-- Será preenchido dinamicamente -->
+                            </div>
+                            ${baseButton}
+                        </div>
+                    `;
+                }
             },
             'Descartado': {
-                description: 'Reabrir negociação da proposta.',
+                description: function(ticketData) {
+                    var self = window.negocioDetalheModule;
+                    const motivoCodigo = ticketData?.motivo_do_descarte;
+                    const motivoDetalhado = ticketData?.detalhe_o_motivo_do_descarte;
+
+                    // Obter label do motivo selecionado
+                    const motivoLabel = self.getMotivoDescarteLabel(motivoCodigo);
+
+                    // Formatar: Motivo + Descrição
+                    var descricao = '';
+                    if (motivoLabel) {
+                        descricao = '<strong>Motivo:</strong> ' + motivoLabel;
+                    }
+                    if (motivoDetalhado) {
+                        descricao += motivoLabel ? '<br><br><strong>Detalhes:</strong> ' + motivoDetalhado : motivoDetalhado;
+                    }
+
+                    return descricao || 'Motivo não informado.';
+                },
                 actionButton: `
                     <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte para reabrir uma negociação descartada', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
                         </svg>
-                        Entrar em Contato com Suporte
+                        Reabrir Negociação
                     </button>
                 `
             },
             'Perdido': {
-                description: 'Reabrir negociação da proposta.',
+                description: function(ticketData) {
+                    var self = window.negocioDetalheModule;
+                    const motivoCodigo = ticketData?.motivo_da_perda;
+                    const motivoDetalhado = ticketData?.detalhe_o_motivo_da_perda;
+
+                    // Obter label do motivo selecionado
+                    const motivoLabel = self.getMotivoPercaLabel(motivoCodigo);
+
+                    // Formatar: Motivo + Descrição
+                    var descricao = '';
+                    if (motivoLabel) {
+                        descricao = '<strong>Motivo:</strong> ' + motivoLabel;
+                    }
+                    if (motivoDetalhado) {
+                        descricao += motivoLabel ? '<br><br><strong>Detalhes:</strong> ' + motivoDetalhado : motivoDetalhado;
+                    }
+
+                    return descricao || 'Motivo não informado.';
+                },
                 actionButton: `
                     <button onclick="window.open('https://wa.me/551148587935?text=Olá! Preciso de suporte para reabrir uma negociação perdida', '_blank')" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
                         </svg>
-                        Entrar em Contato com Suporte
+                        Reabrir Negociação
                     </button>
                 `
             },
@@ -490,11 +1208,11 @@
                     const docs = window.negocioDetalheModule.getDocumentosInfo(ticketData);
                     const hasDocuments = docs.some(doc => doc.fileIds && doc.fileIds.length > 0);
                     
-                    if (hasDocuments) {
-                        return 'Documentos recebidos. Estamos analisando a documentação para dar continuidade ao processo.';
-                    } else {
-                        return 'Envie os documentos complementares e dados do proponente para formalização.';
-                    }
+                    return 'Envie os documentos complementares e dados do proponente para formalização.';
+                    // if (hasDocuments) {
+                    //     return 'Documentos recebidos. Estamos analisando a documentação para dar continuidade ao processo.';
+                    // } else {
+                    // }
                 },
                 actionButton: function(ticketData) {
                     const docs = window.negocioDetalheModule.getDocumentosInfo(ticketData);
@@ -574,9 +1292,25 @@
 
     generateDetailsCard: function(negocio, ticket) {
         const priorityInfo = this.getTicketPriorityInfo(ticket ? ticket.hs_ticket_priority : null);
-        console.log('negocio.qual_o_seu_principal_objetivo_', negocio.qual_o_seu_principal_objetivo_)
+        const currentPriority = ticket ? ticket.hs_ticket_priority : null;
         const objetivoLabel = this.getObjetivoLabel(negocio ? negocio.qual_o_seu_principal_objetivo_ : null);
-        
+        const currentObjetivo = negocio ? negocio.qual_o_seu_principal_objetivo_ : null;
+
+        console.log('📝 [generateDetailsCard] Prioridade atual:', currentPriority);
+        console.log('📝 [generateDetailsCard] Objetivo atual:', currentObjetivo);
+
+        // Gerar options para prioridade
+        const priorityOptions = this.getEnumerationOptions().hs_ticket_priority.map(function(opt) {
+            const isSelected = currentPriority === opt.value;
+            return '<option value="' + opt.value + '"' + (isSelected ? ' selected' : '') + '>' + opt.label + '</option>';
+        }).join('');
+
+        // Gerar options para objetivo
+        const objetivoOptions = this.getPrincipaisObjetivos().map(function(opt) {
+            const isSelected = currentObjetivo === opt.value;
+            return '<option value="' + opt.value + '"' + (isSelected ? ' selected' : '') + '>' + opt.label + '</option>';
+        }).join('');
+
         return `
             <div class="card p-6" id="bloco-detalhes">
                 <div class="flex justify-between items-center mb-4">
@@ -589,12 +1323,26 @@
                     <div><p class="text-sm font-medium text-slate-500">Prioridade</p><span class="badge ${priorityInfo.colorClass} mt-1" data-field="hs_ticket_priority">${priorityInfo.icon} ${priorityInfo.label}</span></div>
                     <div><p class="text-sm font-medium text-slate-500">História do cliente</p><p class="text-base text-slate-700 mt-1 bg-slate-50 p-3 rounded-lg border border-slate-200" data-field="historia_do_cliente">${negocio.historia_do_cliente || 'Sem histórico'}</p></div>
                     <div><p class="text-sm font-medium text-slate-500">Principal objetivo</p><p class="text-base text-slate-700 mt-1" data-field="qual_o_seu_principal_objetivo_">${objetivoLabel}</p></div>
+                    ${ticket && ticket.objetivo_secundario && String(ticket.objetivo_secundario).trim() ? `<div><p class="text-sm font-medium text-slate-500">Objetivo secundário</p><p class="text-base text-slate-700 mt-1">${ticket.objetivo_secundario}</p></div>` : ''}
+                    ${ticket && ticket.solucao_procurada && String(ticket.solucao_procurada).trim() ? `<div><p class="text-sm font-medium text-slate-500">Solução procurada</p><p class="text-base text-slate-700 mt-1">${ticket.solucao_procurada}</p></div>` : ''}
                 </div>
                 <div class="edit-mode hidden space-y-4">
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">Prioridade</label><select class="form-select" data-field="hs_ticket_priority">${this.getEnumerationOptions().hs_ticket_priority.map(opt => `<option value="${opt.value}" ${ticket && ticket.hs_ticket_priority === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}</select></div>
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">História do cliente</label><textarea class="form-input" rows="4" data-field="historia_do_cliente">${negocio.historia_do_cliente || ''}</textarea></div>
-                    <div><label class="block text-sm font-medium text-slate-600 mb-1">Principal objetivo</label><select class="form-select" data-field="qual_o_seu_principal_objetivo_">${this.getPrincipaisObjetivos().map(opt => `<option value="${opt.value}" ${negocio && negocio.qual_o_seu_principal_objetivo_ === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}</select></div>
-                    <div class="flex justify-end gap-3 pt-2"><button onclick="window.negocioDetalheModule.cancelEdit('detalhes')" class="btn btn-secondary">Cancelar</button><button onclick="window.negocioDetalheModule.saveEdit('detalhes')" class="btn btn-primary">Salvar</button></div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Prioridade</label>
+                        <select class="form-select" data-field="hs_ticket_priority">${priorityOptions}</select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">História do cliente</label>
+                        <textarea class="form-input" rows="4" data-field="historia_do_cliente">${negocio.historia_do_cliente || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Principal objetivo</label>
+                        <select class="form-select" data-field="qual_o_seu_principal_objetivo_">${objetivoOptions}</select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button onclick="window.negocioDetalheModule.cancelEdit('detalhes')" class="btn btn-secondary">Cancelar</button>
+                        <button onclick="window.negocioDetalheModule.saveEdit('detalhes')" class="btn btn-primary">Salvar</button>
+                    </div>
                 </div>
             </div>`;
     },
@@ -620,12 +1368,12 @@
         return `<div class="card"><div class="p-6"><h2 class="text-lg font-semibold text-slate-900">Status dos Documentos</h2></div><div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr><th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Documento</th><th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th><th class="px-6 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Ações</th></tr></thead><tbody class="bg-white divide-y divide-slate-200">${rowsHTML}</tbody></table></div></div>`;
     },
 
-    generateApprovalCard: function(ticket) {
-        const resumo = this.getResumoAprovacao(ticket);
-        
+    generateApprovalCard: function(ticket, historicoPropostas) {
+        const resumo = this.getResumoAprovacao(ticket, historicoPropostas);
+
         return `
         <div class="card p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Resumo da Aprovação</h2>
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">Resumo da Aprovação pós comitê investidor</h2>
             
             <!-- Valores Aprovados -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -647,7 +1395,7 @@
                             <p class="text-sm font-medium text-orange-800">Apresentação da Proposta</p>
                             <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
                         </div>
-                        <button 
+                        <button
                            ${resumo.linkApresentacao ? `onclick="window.open('${resumo.linkApresentacao}', '_blank')"` : 'disabled'}
                            class="inline-flex items-center px-3 py-2 text-sm font-medium ${resumo.linkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed'} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -658,7 +1406,31 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Histórico de Versões da Proposta -->
+            ${resumo.historicoPropostas && resumo.historicoPropostas.historico && resumo.historicoPropostas.historico.length > 0 ? `
+            <div class="mt-4">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <p class="text-xs font-medium text-slate-600 mb-2">Versões Anteriores</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${resumo.historicoPropostas.historico.map(function(versao, index) {
+                            var dataFormatada = new Date(versao.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                            return `
+                            <a href="${versao.link}" target="_blank"
+                               class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                               title="Criada em ${dataFormatada}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                Versão ${index + 1}
+                            </a>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+
             <!-- Comentários do Comitê -->
             <div class="mt-6 space-y-4">
                 <div>
@@ -714,6 +1486,270 @@
     //         </div>`;
     // },
 
+    generateValuesApprovalCard: function(ticket, historicoPropostas) {
+      const valoresAvaliacao = this.getValoresAvaliacao(ticket);
+      const resumoAprovacao = this.getResumoAprovacao(ticket, historicoPropostas);
+
+      // Check if approved values are zero or N/A
+      const valorCompra12Raw = ticket?.valor_aprovado_para_compra___12_meses || 0;
+      const valorLocacao12Raw = ticket?.valor_aprovado_para_locacao___12_meses || 0;
+      const isCompraZero = !valorCompra12Raw || valorCompra12Raw === 0 || resumoAprovacao.valorCompra12 === 'N/A';
+      const isLocacaoZero = !valorLocacao12Raw || valorLocacao12Raw === 0 || resumoAprovacao.valorLocacao12 === 'N/A';
+
+      // Verificar se o ticket está na etapa "Proposta disponivel para apresentação" ou posterior
+      const currentStageId = ticket?.hs_pipeline_stage;
+      const avaliacaoExternaStageId = '1186972699';
+
+      // Determinar se é Fluxo 2 (acima de R$2M)
+      const valorLimpo = ticket?.valor_medio_amostras ? String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+      // Converter valor removendo pontos, vírgulas e espaços, mantendo apenas números
+      const valorMedioAmostrasNumero = valorLimpo ? parseFloat(valorLimpo.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0;
+      const isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      
+      // Ajustar propostaDisponivelId para Fluxo 2
+      const propostaDisponivelId = isFluxo2 ? '1208748705' : '1062003577'; // Comitê investidor para Fluxo 2
+
+      // Verificar se valores do comitê investidor estão preenchidos
+      const valoresComiteInvestidorPreenchidos = !isCompraZero && !isLocacaoZero;
+
+      // Lista ordenada das etapas do funil
+      const stageOrder = [
+        '1095534672',
+        '1095534673',
+        '1095534674',
+        '1043275525',
+        '1043275526',
+        '1095528865', // Avaliação do imóvel (comitê interno) - MOVER PARA ANTES
+        '1204075783',
+        '1043275527', // Pré Análise e Due Diligence - MOVER PARA DEPOIS
+        '1062003577', // Proposta disponível para apresentação
+        '1186972699',
+        '1062003578', // Pedido de Contraproposta do cliente - MOVER PARA DEPOIS da proposta
+        '1208748705',
+        '1208820114', // Proposta Comitê Investidor / Segunda proposta cliente
+        '1095528866',
+        '1095528867',
+        '1095528868',
+        '1095528869',
+        '1095528870',
+        '1095528871',
+        '1206453052',
+        '1095528872',
+        '1095528873',
+      ];
+
+      // Encontrar índice da etapa atual e da etapa de proposta disponível
+      const currentIndex = stageOrder.indexOf(currentStageId);
+      const propostaIndex = stageOrder.indexOf(propostaDisponivelId);
+      
+      // ID da etapa "Proposta Comitê Investidor" / "Segunda proposta cliente"
+      const propostaComiteInvestidorId = '1208820114';
+      const propostaComiteInvestidorIndex = stageOrder.indexOf(propostaComiteInvestidorId);
+      
+      // ID da etapa "Proposta disponível para apresentação" (fluxo < 2M)
+      const propostaDisponivelIdFluxo1 = '1062003577';
+      const propostaDisponivelIndexFluxo1 = stageOrder.indexOf(propostaDisponivelIdFluxo1);
+      
+      // Verificar se já chegou ou passou pela etapa "Proposta Comitê Investidor" (para seção pós comitê investidor)
+      const hasReachedPropostaComiteInvestidor = currentIndex !== -1 && propostaComiteInvestidorIndex !== -1 && currentIndex >= propostaComiteInvestidorIndex;
+      
+      // Verificar se já chegou na etapa apropriada para "Valores de Avaliação pós comitê interno"
+      // - Fluxo < 2M: "Proposta disponível para apresentação" (1062003577)
+      // - Fluxo >= 2M: "Proposta Comitê Investidor" (1208820114)
+      const etapaComiteInternoIndex = isFluxo2 ? propostaComiteInvestidorIndex : propostaDisponivelIndexFluxo1;
+      const hasReachedEtapaComiteInterno = currentIndex !== -1 && etapaComiteInternoIndex !== -1 && currentIndex >= etapaComiteInternoIndex;
+
+      // Lógica de exibição:
+      // - Fluxo < 2M: aplicar blur até chegar na etapa "Proposta disponível para apresentação" (1062003577)
+      // - Fluxo >= 2M: aplicar blur até chegar na etapa "Proposta Comitê Investidor" (1208820114)
+      // - Aplicar blur se não tiver link da apresentação
+      // - Card sempre visível, mas valores e link com blur quando necessário
+      // Para fluxo < 2M: verificar linkApresentacao
+      // Para fluxo >= 2M: verificar linkPropostaFinalComite
+      const hasLinkApresentacao = isFluxo2 
+        ? (resumoAprovacao.linkPropostaFinalComite && resumoAprovacao.linkPropostaFinalComite.trim() !== '')
+        : (resumoAprovacao.linkApresentacao && resumoAprovacao.linkApresentacao.trim() !== '');
+      
+      // Aplicar blur nos valores se não chegou na etapa apropriada OU se não tem link
+      const shouldBlurValues = !hasReachedEtapaComiteInterno || !hasLinkApresentacao;
+      
+      const shouldShowFluxo2Content = isFluxo2 && valoresComiteInvestidorPreenchidos;
+
+      // console.log('currentStageId', currentStageId)
+      // console.log('currentIndex', currentIndex)
+      // console.log('propostaIndex', propostaIndex)
+      // Se a etapa atual está antes da "Proposta disponivel para apresentação", bloquear visualização do botão
+      const shouldBlurButton = currentIndex !== -1 && currentIndex < propostaIndex;
+
+      // Classes CSS condicionais
+      // Aplicar blur nos valores quando necessário
+      const blurClass = shouldBlurValues ? 'style="filter: blur(4px); pointer-events: none; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : '';
+      const buttonDisabledClass = shouldBlurButton || shouldBlurValues ? 'disabled' : '';
+      const buttonStyleClass = (shouldBlurButton || shouldBlurValues)
+        ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        : (hasLinkApresentacao ? 'text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : 'text-gray-400 bg-gray-100 cursor-not-allowed');
+
+      return `
+          <div class="card p-6">
+              <h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação pós comitê interno</h2>
+              <div class="space-y-3 mb-6" ${blurClass}>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                      <p class="text-sm font-medium text-slate-600">Valor Avaliado</p>
+                      <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorAvaliado}</p>
+                  </div>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                      <p class="text-sm font-medium text-slate-600">Valor de Locação</p>
+                      <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLocacao}</p>
+                  </div>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                      <p class="text-sm font-medium text-slate-600">Valor de Liquidez (Líquido)</p>
+                      <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLiquidez}</p>
+                  </div>
+                  <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                      <p class="text-sm font-medium text-slate-600">Valor de Liquidez (Bruto)</p>
+                      <p class="text-base font-semibold text-slate-900">${valoresAvaliacao.valorLiquidezBruto}</p>
+                  </div>
+              </div>
+
+              <!-- Apresentação da Proposta -->
+              ${isFluxo2 ? '' : `
+              <div class="mb-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">Apresentação da Proposta</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             ${shouldBlurButton || shouldBlurValues || !hasLinkApresentacao ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkApresentacao || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${buttonStyleClass} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              ${shouldBlurButton || shouldBlurValues ? 'Ainda não disponível' : (hasLinkApresentacao ? 'Abrir Apresentação' : 'Ainda não disponível')}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              `}
+
+              <!-- Histórico de Versões da Proposta -->
+              ${resumoAprovacao.historicoPropostas && resumoAprovacao.historicoPropostas.historico && resumoAprovacao.historicoPropostas.historico.length > 0 ? `
+              <div class="mb-6">
+                  <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <p class="text-xs font-medium text-slate-600 mb-2">Versões Anteriores</p>
+                      <div class="flex flex-wrap gap-2">
+                          ${resumoAprovacao.historicoPropostas.historico.map(function(versao, index) {
+                              var dataFormatada = new Date(versao.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                              return `
+                              <a href="${versao.link}" target="_blank"
+                                 class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                                 title="Criada em ${dataFormatada}">
+                                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                  </svg>
+                                  Versão ${index + 1}
+                              </a>
+                              `;
+                          }).join('')}
+                      </div>
+                  </div>
+              </div>
+              ` : ''}
+
+              ${!shouldShowFluxo2Content || !hasReachedPropostaComiteInvestidor ? '' : `
+              <h2 class="text-lg font-semibold text-slate-900 mb-4 mt-8">Resumo da Aprovação pós comitê investidor</h2>
+
+              <!-- Valores Aprovados -->
+              <div class="grid grid-cols-1 gap-4 mb-6">
+                  <div class="bg-green-50 p-4 rounded-lg border border-green-200 ${isCompraZero ? 'relative' : ''}" ${isCompraZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
+                      ${isCompraZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
+                      <p class="text-sm font-medium text-green-800">Valor Aprovado (Compra 12m)</p>
+                      <p class="text-2xl font-bold text-green-700 mt-1">${resumoAprovacao.valorCompra12}</p>
+                  </div>
+                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 ${isLocacaoZero ? 'relative' : ''}" ${isLocacaoZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
+                      ${isLocacaoZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
+                      <p class="text-sm font-medium text-blue-800">Valor Aprovado (Locação 12m)</p>
+                      <p class="text-2xl font-bold text-blue-700 mt-1">${resumoAprovacao.valorLocacao12}</p>
+                  </div>
+                  <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 ${isCompraZero || isLocacaoZero ? 'relative' : ''}" ${isCompraZero || isLocacaoZero ? 'style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"' : ''}>
+                      ${isCompraZero || isLocacaoZero ? '<div class="absolute inset-0 backdrop-blur-sm bg-white/30 rounded-lg flex items-center justify-center"><p class="text-sm font-medium text-slate-600">Aguardando atualização</p></div>' : ''}
+                      <p class="text-sm font-medium text-purple-800">Valor de Liquidez (Bruto)</p>
+                      <p class="text-2xl font-bold text-purple-700 mt-1">${valoresAvaliacao.valorLiquidezBruto}</p>
+                  </div>
+              </div>             
+
+              <!-- Comentários do Comitê -->
+              <div class="mb-2">
+                  <p class="text-sm font-medium text-slate-500 mb-2">Comentários do Comitê</p>
+                  <p class="text-base text-slate-700">${resumoAprovacao.comentarios}</p>
+              </div>
+              `}
+
+              <!-- Propostas para Fluxo 2 (após comitê investidor) ou Fluxo 1 normal -->
+              ${shouldShowFluxo2Content && resumoAprovacao.linkPropostaFinalComite ? `
+              <!-- 1ª Proposta (Fluxo 2 - mesma da 2ª) -->
+              <div class="mb-6 mt-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">Apresentação da Proposta</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             onclick="window.open('${(resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'")}', '_blank')"
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:ring-orange-500 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              Abrir Apresentação
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <!-- 2ª Proposta (Fluxo 2) -->
+              <div class="mb-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">${isFluxo2 ? 'Proposta Comitê Investidor' : 'Proposta validada pelo comite investidor'}</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             onclick="window.open('${(resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'")}', '_blank')"
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-orange-700 bg-white hover:bg-orange-100 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              Abrir Apresentação
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              ` : (!isFluxo2 && resumoAprovacao.linkPropostaFinalComite ? `
+              <!-- Proposta validada pelo comite investidor (Fluxo 1) -->
+              <div class="mb-6 mt-6">
+                  <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div class="flex flex-col gap-3">
+                          <div>
+                              <p class="text-sm font-medium text-orange-800">Proposta validada pelo comite investidor</p>
+                              <p class="text-xs text-orange-600 mt-1">Google Slides para apresentar ao cliente</p>
+                          </div>
+                          <button
+                             ${isCompraZero || isLocacaoZero || !resumoAprovacao.linkPropostaFinalComite ? 'disabled' : 'onclick="window.open(\'' + (resumoAprovacao.linkPropostaFinalComite || '').replace(/'/g, "\\'") + '\', \'_blank\')"'}
+                             class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${isCompraZero || isLocacaoZero || !resumoAprovacao.linkPropostaFinalComite ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-orange-700 bg-white hover:bg-orange-100'} border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              ${isCompraZero || isLocacaoZero ? 'Aguardando atualização' : (resumoAprovacao.linkPropostaFinalComite ? 'Abrir Apresentação' : 'Ainda não disponível')}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              ` : '')}
+          </div>`;
+    },
+
     generateOwnerAnalysisCard: function(ticket) {
       const revolutiInfo = this.getRevolutiInfo(ticket);
       const avaliacaoExternaInfo = this.getAvaliacaoExternaInfo(ticket);
@@ -724,7 +1760,7 @@
               <td class="px-6 py-4 whitespace-nowrap">${this.getRevolutiStatusIcon(revolutiInfo)}</td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                   <div class="flex items-center justify-center gap-2">
-                      ${revolutiInfo.status === 'available' ? 
+                      ${revolutiInfo.status === 'available' ?
                           `<button class="btn btn-ghost btn-icon" title="Baixar Relatório" onclick="window.negocioDetalheModule.downloadRevolutiReport()">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-2-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
@@ -793,22 +1829,8 @@
 
     generatePropertyCard: function(negocio, ticket) {
         const imovel = this.getImovelInfo(negocio, ticket);
-        // Verificar se deve mostrar o botão de solicitar avaliação externa
-        const showAvaliacaoButton = !ticket || !ticket.solicitar_avaliacao_externa || ticket.solicitar_avaliacao_externa !== 'Sim';
-        
-        // HTML do botão de avaliação externa (só aparece se necessário)
-        const avaliacaoButtonHTML = showAvaliacaoButton ? 
-            `<div class="mt-4 flex justify-center">
-                <button onclick="window.negocioDetalheModule.openSolicitarAvaliacao()" 
-                        class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                    Solicitar Avaliação Externa
-                </button>
-            </div>` : '';
 
-            return `<div class="card p-6" id="bloco-imovel">
+        return `<div class="card p-6" id="bloco-imovel">
                       <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-semibold text-slate-900">Informações do Imóvel</h2>
                         <button onclick="window.negocioDetalheModule.toggleEdit('imovel')" class="btn btn-ghost btn-icon">
@@ -870,8 +1892,6 @@
                             <p class="text-base font-semibold text-amber-900 mt-1" data-field="valor_avaliacao_do_imovel_pelo_cliente">${imovel.valorAvaliacaoCliente}</p>
                           </div>
                         </div>
-                    
-                        ${avaliacaoButtonHTML}
                       </div>
                     
                       <div class="edit-mode hidden space-y-4">
@@ -940,9 +1960,7 @@
                             <input type="text" class="form-input currency-input" value="${this.parseCurrencyForEdit(ticket?.valor_avaliacao_do_imovel_pelo_cliente)}" data-field="valor_avaliacao_do_imovel_pelo_cliente" placeholder="R$ 0,00">
                           </div>
                         </div>
-                    
-                        ${avaliacaoButtonHTML}
-                    
+
                         <div class="flex justify-end gap-3 pt-4">
                           <button onclick="window.negocioDetalheModule.cancelEdit('imovel')" class="btn btn-secondary">Cancelar</button>
                           <button onclick="window.negocioDetalheModule.saveEdit('imovel')" class="btn btn-primary">Salvar</button>
@@ -981,7 +1999,7 @@
 
     generateValuationCard: function(ticket) {
         const valores = this.getValoresAvaliacao(ticket);
-        return `<div class="card p-6"><h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação</h2><div class="space-y-4"><div class="flex justify-between"><p class="text-sm text-slate-500">Valor Avaliado</p><p class="text-sm font-semibold text-slate-800">${valores.valorAvaliado}</p></div><div class="flex justify-between"><p class="text-sm text-slate-500">Valor de Locação</p><p class="text-sm font-semibold text-slate-800">${valores.valorLocacao}</p></div><div class="flex justify-between"><p class="text-sm text-slate-500">Valor de Liquidez (Bruto)</p><p class="text-sm font-semibold text-slate-800">${valores.valorLiquidez}</p></div></div></div>`;
+        return `<div class="card p-6"><h2 class="text-lg font-semibold text-slate-900 mb-4">Valores de Avaliação pós comite interno</h2><div class="space-y-4"><div class="flex justify-between"><p class="text-sm text-slate-500">Valor Avaliado</p><p class="text-sm font-semibold text-slate-800">${valores.valorAvaliado}</p></div><div class="flex justify-between"><p class="text-sm text-slate-500">Valor de Locação</p><p class="text-sm font-semibold text-slate-800">${valores.valorLocacao}</p></div><div class="flex justify-between"><p class="text-sm text-slate-500">Valor de Liquidez (Líquido)</p><p class="text-sm font-semibold text-slate-800">${valores.valorLiquidez}</p></div></div></div>`;
     },
 
     generatePhotoCard: function(ticket) {
@@ -995,7 +2013,7 @@
                      </div>
                 </div>
                 <div class="relative overflow-hidden">
-                    <div id="photo-carousel" class="flex gap-4 transition-transform duration-300"></div>
+                    <div id="photo-carousel" class="flex gap-4 transition-transform duration-300 overflow-x-auto"></div>
                 </div>
                 <div class="flex justify-between items-center mb-4 pt-4">
                   <div class="flex gap-2">
@@ -1005,8 +2023,35 @@
                             </svg>
                             Adicionar Fotos
                         </button>
-                       
+
                     </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <p class="text-sm text-slate-600 mb-2">Converta suas imagens de uma única vez para PDF</p>
+                      <a href="https://imagem2pdf.rooftopfranquias.com.br" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-sm font-medium">
+                        Clique aqui
+                      </a>
+                  </div>
+            </div>
+        `;
+    },
+
+    generateDocumentsCardFiles: function(ticket) {
+        return `
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-900">Documentos Complementares</h2>
+                </div>
+                <div id="documents-list" class="space-y-2 mb-4">
+                    <!-- Lista de documentos será inserida aqui -->
+                </div>
+                <div class="pt-4 border-t border-slate-200">
+                    <button onclick="window.negocioDetalheModule.openUploadDocumentsModal()" class="btn btn-primary btn-sm w-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        Adicionar Documentos
+                    </button>
                 </div>
             </div>
         `;
@@ -1025,7 +2070,7 @@
             <div id="modal-solicitar-reajuste" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
                 <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg">
                     <div class="flex justify-between items-center p-5 border-b border-slate-200">
-                        <h3 class="text-lg font-semibold text-slate-900">Solicitar Reajuste da Proposta</h3>
+                        <h3 class="text-lg font-semibold text-slate-900">Solicitar Reajuste da proposta do (comitê investidor)</h3>
                         <button onclick="window.negocioDetalheModule.closeSolicitarReajusteModal()" class="btn btn-ghost btn-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1039,7 +2084,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-600 mb-1">Justificativa <span class="text-red-500">*</span></label>
-                            <textarea id="justificativa-reajuste" class="form-input" rows="4" placeholder="Descreva a justificativa para o reajuste da proposta..." required></textarea>
+                            <textarea id="justificativa-reajuste" class="form-input" rows="4" placeholder="Descreva a justificativa para o Reajuste da proposta do (comitê investidor)..." required></textarea>
                             <p class="text-xs text-slate-500 mt-1">Explique detalhadamente os motivos que justificam a necessidade de reajuste.</p>
                         </div>
                         <div class="flex justify-end gap-3 pt-4">
@@ -1064,7 +2109,7 @@
             <div id="modal-upload-photo" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
                 <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg">
                     <div class="flex justify-between items-center p-5 border-b border-slate-200">
-                        <h3 class="text-lg font-semibold text-slate-900">Adicionar Fotos ou Video do Imóvel</h3>
+                        <h3 class="text-lg font-semibold text-slate-900">Adicionar Fotos, Vídeos ou Documentos do Imóvel</h3>
                         <button onclick="window.negocioDetalheModule.closeUploadPhotoModal()" class="btn btn-ghost btn-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1083,17 +2128,18 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-600 mb-1">Selecionar Arquivos</label>
                             <div id="drop-zone-photo" class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
-                                <input type="file" id="file-input-photo" multiple accept="image/*,video/mp4,.mp4" class="hidden">
+                                <input type="file" id="file-input-photo" multiple accept="image/*,video/mp4,.mp4,.pdf,.doc,.docx" class="hidden">
                                 <div id="drop-content-photo">
                                     <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
                                     <div class="mt-4">
                                         <p class="text-sm text-slate-600">
-                                            <span class="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">Clique para selecionar</span> ou arraste as imagens e vídeos aqui
+                                            <span class="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">Clique para selecionar</span> ou arraste as imagens, vídeos ou documentos aqui
                                         </p>
                                         <p class="text-xs text-slate-500 mt-1">Imagens: PNG, JPG, JPEG até 10MB cada</p>
                                         <p class="text-xs text-slate-500 mt-1">Vídeos: MP4 até 50MB</p>
+                                        <p class="text-xs text-slate-500 mt-1">Documentos: PDF, DOC, DOCX até 10MB cada</p>
                                     </div>
                                 </div>
                                 <div id="file-list-photo" class="mt-4 text-left hidden"></div>
@@ -1104,6 +2150,55 @@
                                 Cancelar
                             </button>
                             <button type="submit" class="btn btn-primary" disabled id="upload-btn-photo">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Fazer Upload
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+    },
+
+    generateUploadDocumentsModalHTML: function() {
+        return `
+            <div id="modal-upload-documents" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+                <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                    <div class="flex justify-between items-center p-5 border-b border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-900">Adicionar Documentos Complementares</h3>
+                        <button onclick="window.negocioDetalheModule.closeUploadDocumentsModal()" class="btn btn-ghost btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <form id="form-upload-documents" class="p-5 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Selecionar Documentos</label>
+                            <div id="drop-zone-documents" class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
+                                <input type="file" id="file-input-documents" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.rtf,.zip,.rar" class="hidden">
+                                <div id="drop-content-documents">
+                                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    <div class="mt-4">
+                                        <p class="text-sm text-slate-600">
+                                            <span class="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">Clique para selecionar</span> ou arraste os documentos aqui
+                                        </p>
+                                        <p class="text-xs text-slate-500 mt-1">Aceita: PDF, DOC, DOCX, XLS, XLSX, TXT, ZIP, RAR</p>
+                                        <p class="text-xs text-slate-500 mt-1">Tamanho máximo: 10MB por arquivo</p>
+                                    </div>
+                                </div>
+                                <div id="file-list-documents" class="mt-4 text-left hidden"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-3 pt-4">
+                            <button type="button" onclick="window.negocioDetalheModule.closeUploadDocumentsModal()" class="btn btn-secondary">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled id="upload-btn-documents">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                                 </svg>
@@ -1161,11 +2256,20 @@
     },
 
     // Função para obter a data de conclusão de uma etapa específica
-    getStepCompletionDate: function(stepId, ticketData) {
+    getStepCompletionDate: function(stepId, ticketData, currentStageId) {
       // console.log('getStepCompletionDate', stepId, ticketData);
       if (!ticketData || !stepId) return null;
-      const fieldName = this.getDateEnteredFieldName(stepId);
+
+      // Se currentStageId for fornecido e for diferente do stepId,
+      // significa que estamos em um combinedId e devemos buscar a data dele
+      const dateFieldId = currentStageId && currentStageId !== stepId ? currentStageId : stepId;
+
+      const fieldName = this.getDateEnteredFieldName(dateFieldId);
       const timestamp = ticketData[fieldName];
+
+      // 🔍 DEBUG: Ver o que está retornando
+      console.log(`[getStepCompletionDate] stepId=${stepId}, fieldName=${fieldName}, timestamp=${timestamp}, tipo=${typeof timestamp}`);
+
       // return this.formatHubSpotDate(timestamp);
       return timestamp;
     },
@@ -1178,10 +2282,16 @@
         '1095534675': { label: 'Aguardando documentação', color: 'bg-yellow-100 text-yellow-800' },
         '1043275525': { label: 'Documentação enviada', color: 'bg-blue-100 text-blue-800' },
         '1043275526': { label: 'Aguardando documentos complementares', color: 'bg-yellow-100 text-yellow-800' },
-        '1043275527': { label: 'Em análise do backoffice', color: 'bg-purple-100 text-purple-800' },
-        '1062003577': { label: 'Apresentação da proposta', color: 'bg-indigo-100 text-indigo-800' },
-        '1062003578': { label: 'Negociação da proposta', color: 'bg-orange-100 text-orange-800' },
-        '1095528865': { label: 'Avaliação do imóvel', color: 'bg-purple-100 text-purple-800' },
+        '1043275527': { label: 'Pré Análise e Due Diligence', color: 'bg-purple-100 text-purple-800' },
+        '1062003577': { label: 'Proposta disponivel para apresentação', color: 'bg-indigo-100 text-indigo-800' },
+        '1207696559': { label: 'Proposta disponivel para apresentação - Agendar 2ª visita', color: 'bg-indigo-100 text-indigo-800' },
+        '1207696560': { label: 'Proposta disponivel para apresentação - 2ª visita realizada', color: 'bg-indigo-100 text-indigo-800' },
+        '1062003578': { label: 'Pedido de Contraproposta do cliente', color: 'bg-orange-100 text-orange-800' },
+        '1095528865': { label: 'Avaliação do imóvel (comitê interno)', color: 'bg-purple-100 text-purple-800' },
+        '1204075783': { label: 'Comitê interno', color: 'bg-teal-100 text-teal-800' }, 
+        '1186972699': { label: 'Avaliação externa', color: 'bg-teal-100 text-teal-800' },
+        '1208748705': { label: 'Comitê investidor', color: 'bg-orange-100 text-orange-800' },
+        '1208820114': { label: 'Segunda proposta cliente', color: 'bg-orange-100 text-orange-800' },
         '1095528866': { label: 'Reajuste da proposta', color: 'bg-orange-100 text-orange-800' },
         '1095528867': { label: 'Documentação para formalização', color: 'bg-yellow-100 text-yellow-800' },
         '1095528868': { label: 'Formalização Jurídica', color: 'bg-indigo-100 text-indigo-800' },
@@ -1189,50 +2299,170 @@
         '1095528870': { label: 'Finalização do pagamento', color: 'bg-green-100 text-green-800' },
         '1095528871': { label: 'Em locação', color: 'bg-green-100 text-green-800' },
         '1095528872': { label: 'Descartado', color: 'bg-gray-100 text-gray-800' },
-        '1095528873': { label: 'Perdido', color: 'bg-red-100 text-red-800' }
+        '1095528873': { label: 'Perdido', color: 'bg-red-100 text-red-800' },
+        '1206453052': { label: 'Standby', color: 'bg-amber-100 text-amber-800' },
       };
       return statusMap[hs_pipeline_stage] || { label: 'Status não identificado', colorClass: 'badge-gray' };
     },
 
+    // TODO: Função para obter os passos do funil de negócios (pipeline de Franquias)
     getFunnelSteps: function() {
       return [
         { id: '1095534672', label: 'Lead inicial' },
-        { id: '1095534673', label: 'Visita marcada' },
-        { id: '1095534674', label: 'Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
+        { id: '1095534673', label: '1ª Visita marcada' },
+        { id: '1095534674', label: '1ª Visita realizada - Aguardando documentação', combinedIds: ['1095534674', '1095534675'] },
         { id: '1043275525', label: 'Documentação enviada' },
         { id: '1043275526', label: 'Aguardando documentos complementares' },
-        { id: '1043275527', label: 'Em análise do backoffice' },
-        { id: '1095528865', label: 'Avaliação do imóvel' },
-        { id: '1062003577', label: 'Apresentação da proposta' },
-        { id: '1062003578', label: 'Negociação da proposta' },
+        { id: '1095528865', label: 'Avaliação do imóvel (comitê interno)', combinedIds: ['1095528865', '1204075783'] }, // MOVER PARA ANTES
+        { id: '1043275527', label: 'Pré Análise e Due Diligence' }, // MOVER PARA DEPOIS
+        { id: '1186972699', label: 'Avaliação externa', combinedIds: ['1186972699', '979376900'] },
+        { id: '1062003577', label: 'Proposta disponivel para apresentação' },
+        { id: '1207696559', label: '2ª Reunião marcada', combinedIds: ['1207696559' , '1207696560'] },
+        { id: '1062003578', label: 'Pedido de Contraproposta do cliente' }, // MOVER PARA DEPOIS da proposta
+        { id: '1208748705', label: 'Comitê investidor' },
+        { id: '1208820114', label: 'Segunda proposta cliente' },
         { id: '1095528866', label: 'Reajuste da proposta' },
         { id: '1095528867', label: 'Documentação para formalização' },
         { id: '1095528868', label: 'Formalização Jurídica' },
         { id: '1095528869', label: 'Condicionais e Registro do imóvel' },
         { id: '1095528870', label: 'Finalização do pagamento' },
         { id: '1095528871', label: 'Em locação' },
+        { id: '1206453052', label: 'Standby' }, // Etapa condicional - só aparece se já passou por ela
         { id: '1095528872', label: 'Descartado' },
         { id: '1095528873', label: 'Perdido' }
       ];
     },
 
-    getFunnelProgress: function(currentStageId) {
+    getFunnelProgress: function(currentStageId, ticketPortal) {
       var allSteps = this.getFunnelSteps();
-      
+
       // Verificar se a etapa atual é "Descartado" ou "Perdido"
-      var isDescartadoOrPerdido = currentStageId === '1095528872' || currentStageId === '1095528871';
-      
+      var isDescartadoOrPerdido = currentStageId === '1095528872' || currentStageId === '1095528873';
+
       if (isDescartadoOrPerdido) {
         // Se for Descartado ou Perdido, mostrar apenas essas duas etapas
         var steps = [
           { id: '1095528872', label: 'Descartado' },
-          { id: '1095528871', label: 'Perdido' }
+          { id: '1095528873', label: 'Perdido' }
         ];
         var currentIndex = steps.findIndex(step => step.id === currentStageId);
         return { steps, currentIndex };
       } else {
-        // Caso contrário, mostrar o funil normal (excluindo Descartado e Perdido)
-        var steps = allSteps.filter(step => step.id !== '1095528872' && step.id !== '1095528871');
+        // Verificar se deve mostrar etapa Standby
+        var isStandby = currentStageId === '1206453052';
+        var hasPassedStandby = ticketPortal && ticketPortal.hs_v2_date_entered_1206453052;
+
+        // Caso contrário, mostrar o funil normal (excluindo Descartado, Perdido e condicionalmente Standby)
+        var steps = allSteps.filter(function(step) {
+          // Sempre excluir Descartado e Perdido
+          if (step.id === '1095528872' || step.id === '1095528873') return false;
+
+          // Incluir Standby apenas se estiver nessa etapa OU já tiver passado por ela
+          if (step.id === '1206453052') {
+            return isStandby || hasPassedStandby;
+          }
+
+          return true;
+        });
+        
+        // 🔄 NOVA LÓGICA: Verificar Fluxo 2 e mapear currentStageId se necessário
+        const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+        let isFluxo2 = false;
+        
+        if (ticket && ticket.valor_medio_amostras) {
+          const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+          const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+          isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+          
+          // Mapear currentStageId se estiver em etapa filtrada no Fluxo 2
+          if (isFluxo2) {
+            const etapasFiltradas = ['1095528865', '1062003577', '1207696559', '1062003578'];
+            const avaliacaoExternaRealizada = ticketPortal?.hs_v2_date_entered_1186972699;
+            
+            if (etapasFiltradas.includes(currentStageId)) {
+              if (currentStageId === '1095528865' && !avaliacaoExternaRealizada) {
+                currentStageId = '1186972699'; // Mapear para Avaliação Externa
+                console.log('🔄 [FLUXO 2] Mapeando "Avaliação do imóvel (comitê interno)" para "Avaliação Externa"');
+              } else {
+                currentStageId = '1208748705'; // Mapear para Comitê Investidor
+                console.log('🔄 [FLUXO 2] Mapeando etapa filtrada para "Comitê Investidor"');
+              }
+            }
+          }
+        }
+        
+        // TODO: Corrigir logica
+        // 🔄 NOVA LÓGICA DE REORDENAÇÃO DINÂMICA - Baseada em valor_medio_amostras
+        if (ticketPortal && ticket && ticket.valor_medio_amostras) {
+          // Reutilizar valor já calculado acima
+          const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+          const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+
+          console.log('🔄 [REORDENAÇÃO] Valor médio das amostras:', valorMedioAmostrasNumero);
+
+          // Se valor < R$ 2.000.000, mover Avaliação Externa para DEPOIS da 2ª Reunião Marcada
+          if (valorMedioAmostrasNumero < 2000000) {
+            console.log('🔄 [CENÁRIO < 2M] Movendo Avaliação Externa para DEPOIS da 2ª Reunião Marcada');
+
+            // Encontrar índices
+            const indexAvaliacaoExterna = steps.findIndex(step =>
+              step.id === '1186972699' || step.id === '979376900' ||
+              (step.combinedIds && (step.combinedIds.includes('1186972699') || step.combinedIds.includes('979376900')))
+            );
+            const index2aReuniaoMarcada = steps.findIndex(step =>
+              step.id === '1207696559'
+            );
+
+            console.log('🔄 [REORDENAÇÃO] Índices:', {
+              avaliacaoExterna: indexAvaliacaoExterna,
+              reuniao2Marcada: index2aReuniaoMarcada
+            });
+
+            // Mover apenas se Avaliação Externa estiver ANTES da 2ª Reunião Marcada
+            if (indexAvaliacaoExterna !== -1 && index2aReuniaoMarcada !== -1 && indexAvaliacaoExterna < index2aReuniaoMarcada) {
+              const avaliacaoExternaStep = steps.splice(indexAvaliacaoExterna, 1)[0];
+              steps.splice(index2aReuniaoMarcada, 0, avaliacaoExternaStep); // Inserir logo após 2ª Reunião Marcada
+
+              console.log('✅ [CENÁRIO < 2M] Avaliação Externa movida para DEPOIS da 2ª Reunião Marcada');
+              console.log('   Ordem: Pré-análise → Comitê Interno → Proposta Disponível → 2ª Reunião Marcada → Avaliação Externa');
+            }
+          } else {
+            // Se valor >= R$ 2.000.000, manter ordem DEFAULT (já definida em getFunnelSteps)
+            console.log('🔄 [CENÁRIO >= 2M] Mantendo ordem DEFAULT do funil');
+            console.log('   Ordem: Pré-análise → Avaliação Externa → Comitê Interno → Proposta Disponível');
+          }
+        }
+        
+        // 🔄 NOVA LÓGICA: Filtrar etapas do Fluxo 2
+        if (isFluxo2) {
+          // Remover apenas etapas específicas do fluxo < 2M, mantendo "Avaliação do imóvel (comitê interno)"
+          const etapasParaRemover = ['1062003577', '1207696559', '1062003578'];
+          const combinedIdsParaRemover = ['1207696560']; // IDs relacionados (removendo 1204075783 que é parte do comitê interno)
+          
+          steps = steps.filter(function(step) {
+            // Remover step principal
+            if (etapasParaRemover.includes(step.id)) {
+              console.log('🔄 [FLUXO 2] Removendo etapa:', step.label, '(', step.id, ')');
+              return false;
+            }
+            
+            // Remover se algum combinedId estiver na lista
+            if (step.combinedIds) {
+              const shouldRemove = step.combinedIds.some(function(id) {
+                return etapasParaRemover.includes(id) || combinedIdsParaRemover.includes(id);
+              });
+              if (shouldRemove) {
+                console.log('🔄 [FLUXO 2] Removendo etapa por combinedId:', step.label, '(', step.id, ')');
+                return false;
+              }
+            }
+            
+            return true;
+          });
+          
+          console.log('✅ [FLUXO 2] Etapas filtradas. Total de etapas restantes:', steps.length);
+        }
+
         var currentIndex = steps.findIndex(step => {
           // Verificar se é um step com IDs combinados
           if (step.combinedIds) {
@@ -1285,10 +2515,23 @@
 
     getObjetivoLabel: function(value) {
       var formatedValue = Array.isArray(value) ? value[0] : value;
-      var objetivo = this.getPrincipaisObjetivos().find(obj => obj.label === formatedValue);
-      console.log('objetivo', objetivo)
-      console.log('formatedValue', formatedValue)
+      // Buscar por value (ex: "tenho_outros_objetivos_financeiros"), não por label
+      console.log('getObjetivoLabel: ', formatedValue)
+      var objetivo = this.getPrincipaisObjetivos().find(obj => obj.value === formatedValue);
+      
       return objetivo ? objetivo.label : 'Não informado';
+    },
+
+    getMotivoDescarteLabel: function(value) {
+      if (!value) return null;
+      var formatedValue = Array.isArray(value) ? value[0] : value;
+      return this.motivosDescarte[formatedValue] || formatedValue;
+    },
+
+    getMotivoPercaLabel: function(value) {
+      if (!value) return null;
+      var formatedValue = Array.isArray(value) ? value[0] : value;
+      return this.motivosPerda[formatedValue] || formatedValue;
     },
 
     getEnumerationOptions: function() {
@@ -1451,6 +2694,7 @@
             { id: 'certidoes', nameKey: 'Certidão Civil', fileKey: 'certidao_de_estado_civil', statusKey: 'status_certidao_de_estado_civil', notesKey: 'notas_certidao_de_estado_civil' },
             { id: 'condominio', nameKey: 'Boleto Condomínio', fileKey: 'boleto_de_condominio', statusKey: 'status_boleto_de_condominio', notesKey: 'notas_boleto_de_condominio' },
             { id: 'matricula', nameKey: 'Matrícula', fileKey: 'matricula', statusKey: 'status_matricula', notesKey: 'notas_matricula' },
+            { id: 'documentos_complementares', nameKey: 'Documentos complementares', fileKey: 'documentos_complementares', statusKey: 'documentos_complementares', notesKey: 'documentos_complementares' },
         ];
         return docMap.map(d => {
             const fileIds = this.parseFileIds(ticket[d.fileKey]);
@@ -1544,26 +2788,31 @@
     },
 
     getValoresAvaliacao: function(ticket) {
-        if (!ticket) return { valorAvaliado: 'N/A', valorLocacao: 'N/A', valorLiquidez: 'N/A' };
+        if (!ticket) return { valorAvaliado: 'N/A', valorLocacao: 'N/A', valorLiquidez: 'N/A', valorLiquidezBruto: 'N/A' };
         return {
             valorAvaliado: this.formatCurrency(ticket.valor_avaliado),
             valorLocacao: this.formatCurrency(ticket.valor_da_locacao),
-            valorLiquidez: this.formatCurrency(ticket.valor_de_liquidez__bruto_),
+            valorLiquidez: this.formatCurrency(ticket.valor_de_liquidez__para_cliente_),
+            valorLiquidezBruto: this.formatCurrency(ticket.valor_de_liquidez__bruto_),
         };
     },
 
-    getResumoAprovacao: function(ticket) {
-        if (!ticket) return { 
-            valorCompra12: 'N/A', 
-            valorLocacao12: 'N/A', 
+    getResumoAprovacao: function(ticket, historicoPropostas) {
+        if (!ticket) return {
+            valorCompra12: 'N/A',
+            valorLocacao12: 'N/A',
             comentarios: 'N/A',
-            linkApresentacao: null
+            linkApresentacao: null,
+            linkPropostaFinalComite: null,
+            historicoPropostas: null
         };
         return {
             valorCompra12: this.formatCurrency(ticket.valor_aprovado_para_compra___12_meses),
             valorLocacao12: this.formatCurrency(ticket.valor_aprovado_para_locacao___12_meses),
             comentarios: ticket.comentarios_comite__pendencias_e_ressalvas_ || 'N/A',
-            linkApresentacao: ticket.link_da_proposta || null
+            linkApresentacao: ticket.link_da_proposta || null,
+            linkPropostaFinalComite: ticket.link_da_proposta_final___comite_investidor || null,
+            historicoPropostas: historicoPropostas || null
         };
     },
 
@@ -1843,11 +3092,11 @@
         .then(function() {
           viewMode.style.display = 'block';
           editMode.style.display = 'none';
-          this.showToast('Todos os campos foram atualizados com sucesso!', 'success');
+          // this.showToast('Todos os campos foram atualizados com sucesso!', 'success');
         })
         .catch(function(error) {
           console.error('Erro ao salvar campos:', error);
-          this.showToast('Erro ao salvar alguns campos. Verifique o console para detalhes.', 'error');
+          // this.showToast('Erro ao salvar alguns campos. Verifique o console para detalhes.', 'error');
         })
         .finally(function() {
           if (saveButton) {
@@ -1998,14 +3247,15 @@
     updateViewMode: function(blockId, fieldName, newValue) {
       var block = document.getElementById('bloco-' + blockId);
       if (!block) return;
-      
+
       var viewElement = block.querySelector('.view-mode [data-field="' + fieldName + '"]');
       if (!viewElement) return;
-      
+
       if (fieldName === 'hs_ticket_priority') {
         var priorityInfo = this.getTicketPriorityInfo(newValue);
-        viewElement.innerHTML = '<span>' + priorityInfo.icon + '</span>' + priorityInfo.label;
-        viewElement.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ' + priorityInfo.color;
+        // Usar classes badge corretas ao invés de inline-flex
+        viewElement.innerHTML = priorityInfo.icon + ' ' + priorityInfo.label;
+        viewElement.className = 'badge ' + priorityInfo.colorClass + ' mt-1';
       } else if (fieldName === 'qual_o_seu_principal_objetivo_') {
         viewElement.textContent = this.getObjetivoLabel(newValue);
       } else {
@@ -2936,16 +4186,16 @@
         document.body.removeChild(link);
       }
     },
-    nextPhoto: function() { const carousel = document.getElementById('photo-carousel'); if (carousel) carousel.scrollBy({ left: 300, behavior: 'smooth' }); },
-    previousPhoto: function() { const carousel = document.getElementById('photo-carousel'); if (carousel) carousel.scrollBy({ left: -300, behavior: 'smooth' }); },
+    nextPhoto: function() { const carousel = document.getElementById('photo-carousel'); if (carousel) carousel.scrollBy({ left: 144, behavior: 'smooth' }); },
+    previousPhoto: function() { const carousel = document.getElementById('photo-carousel'); if (carousel) carousel.scrollBy({ left: -144, behavior: 'smooth' }); },
     parseFileIds: function(fieldValue) { if (!fieldValue) return []; return fieldValue.split(';').map(id => id.trim()).filter(Boolean); },
     loadFileFromEndpoint: function(fileId) { if (this.fileCache[fileId]) return Promise.resolve(this.fileCache[fileId]); return fetch(`https://n8n2.rooftop.com.br/webhook/portal/get-file?id=${fileId}`).then(res => res.json()).then(data => { this.fileCache[fileId] = data; return data; }); },
     
     // Função para buscar atividades de visita
     fetchVisitActivities: function(ticketId, contactId) {
       var url = `https://n8n2.rooftop.com.br/webhook/portal/meetings/visita?ticket_id=${ticketId}&contact_id=${contactId}`;
-      
-      
+
+
       return fetch(url)
         .then(function(response) {
           if (!response.ok) {
@@ -2962,17 +4212,96 @@
           return null;
         });
     },
+
+    // Função para buscar meeting de Standby
+    fetchStandbyMeetings: function(ticketId, contactId) {
+      var url = `https://n8n2.rooftop.com.br/webhook/portal/meetings/standby?ticket_id=${ticketId}&contact_id=${contactId}`;
+
+      console.log('🔍 Buscando meeting de Standby para ticket:', ticketId, 'e contato:', contactId);
+
+      return fetch(url)
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('Erro ao buscar meeting de Standby');
+          }
+          return response.json();
+        })
+        .then(function(data) {
+          console.log('✅ Meeting de Standby carregado:', data);
+          return data;
+        })
+        .catch(function(error) {
+          console.error('❌ Erro ao buscar meeting de Standby:', error);
+          return null;
+        });
+    },
+
+    // Função para buscar atividades de 2ª visita
+    fetch2VisitMeetings: function(ticketId, contactId) {
+      var url = `https://n8n2.rooftop.com.br/webhook/portal/meetings/2visita?ticket_id=${ticketId}&contact_id=${contactId}`;
+
+      console.log('🔍 Buscando meeting de 2ª visita para ticket:', ticketId, 'e contato:', contactId);
+
+      return fetch(url)
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('Erro ao buscar meeting de 2ª visita');
+          }
+          return response.json();
+        })
+        .then(function(data) {
+          console.log('✅ Meeting de 2ª visita carregado:', data);
+          return data;
+        })
+        .catch(function(error) {
+          console.error('❌ Erro ao buscar meeting de 2ª visita:', error);
+          return null;
+        });
+    },
+
+    // Função para buscar histórico de propostas
+    fetchPropostaHistory: function(ticketId) {
+      if (!ticketId) {
+        console.warn('⚠️ ticketId não fornecido para fetchPropostaHistory');
+        return Promise.resolve(null);
+      }
+
+      var url = 'https://n8n2.rooftop.com.br/webhook/portal/propostas/history';
+      var payload = { ticket_id: ticketId };
+
+      console.log('🔍 Buscando histórico de propostas para ticket:', ticketId);
+
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('Erro ao buscar histórico de propostas: ' + response.status);
+          }
+          return response.json();
+        })
+        .then(function(data) {
+          console.log('✅ Histórico de propostas carregado:', data);
+          return data;
+        })
+        .catch(function(error) {
+          console.error('❌ Erro ao buscar histórico de propostas:', error);
+          return null;
+        });
+    },
     
     // Função para atualizar a UI com informações da visita
     updateVisitInfo: function(data) {
       var container = document.getElementById('visit-info-display');
       if (!container || !data) return;
-      
+
       // Armazenar o meeting_id globalmente para uso posterior
       if (data.id) {
         window.currentMeetingId = data.id;
       }
-      
+
       // Formatar data e hora da reunião
       var meetingTime = data.properties.hs_meeting_start_time ? new Date(data.properties.hs_meeting_start_time).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -2981,7 +4310,7 @@
         hour: '2-digit',
         minute: '2-digit'
       }) : 'Não definido';
-      
+
       // Formatar data de criação
       var createDate = data.properties.hs_createdate ? new Date(data.properties.hs_createdate).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -2990,7 +4319,7 @@
         hour: '2-digit',
         minute: '2-digit'
       }) : '';
-      
+
       var html = `
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
           <p class="font-semibold text-blue-900 mb-2">Informações da Visita Agendada:</p>
@@ -3001,15 +4330,102 @@
           </div>
         </div>
       `;
-      
+
       container.innerHTML = html;
       container.classList.remove('hidden');
-      
+
       // Atualizar o botão para incluir o meeting_id
       var button = document.querySelector('[onclick="window.negocioDetalheModule.openReuniaoRealizadaModal()"]');
       if (button && data.id) {
         button.setAttribute('onclick', `window.negocioDetalheModule.openReuniaoRealizadaModal('${data.id}')`);
       }
+    },
+
+    // Função para atualizar a UI com informações da 2ª visita
+    update2VisitInfo: function(data) {
+      var container = document.getElementById('visit2-info-display');
+      if (!container || !data) return;
+
+      // Armazenar o meeting_id globalmente para uso posterior
+      if (data.id) {
+        window.current2MeetingId = data.id;
+      }
+
+      // Formatar data e hora da reunião
+      var meetingTime = data.properties.hs_meeting_start_time ? new Date(data.properties.hs_meeting_start_time).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : 'Não definido';
+
+      // Formatar data de criação
+      var createDate = data.properties.hs_createdate ? new Date(data.properties.hs_createdate).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '';
+
+      var html = `
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+          <p class="font-semibold text-blue-900 mb-2">Informações da 2ª Reunião Agendada:</p>
+          <div class="space-y-1 text-blue-800">
+            <p><span class="font-medium">Data/Hora:</span> ${meetingTime}</p>
+            ${data.properties.hs_meeting_body ? `<p><span class="font-medium">Detalhes:</span> ${data.properties.hs_meeting_body}</p>` : ''}
+            ${createDate ? `<p class="text-sm text-slate-500"><span class="">Agendado em:</span> ${createDate}</p>` : ''}
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove('hidden');
+
+      // Atualizar o botão para incluir o meeting_id
+      var button = document.querySelector('[onclick="window.negocioDetalheModule.openApresentacaoRealizadaModal()"]');
+      if (button && data.id) {
+        button.setAttribute('onclick', `window.negocioDetalheModule.openApresentacaoRealizadaModal('${data.id}')`);
+      }
+    },
+
+    // Função para atualizar a UI com informações do meeting de Standby
+    updateStandbyInfo: function(data) {
+      var container = document.getElementById('standby-info-display');
+      if (!container || !data) return;
+
+      // Formatar data e hora do meeting
+      var meetingTime = data.properties.hs_meeting_start_time ? new Date(data.properties.hs_meeting_start_time).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : 'Não definido';
+
+      // Formatar data de criação
+      var createDate = data.properties.hs_createdate ? new Date(data.properties.hs_createdate).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '';
+
+      var html = `
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm mb-3">
+          <p class="font-semibold text-amber-900 mb-2">Informações do Standby:</p>
+          <div class="space-y-1 text-amber-800">
+            <p><span class="font-medium">Data da Pausa:</span> ${meetingTime}</p>
+            ${data.properties.hs_meeting_body ? `<p><span class="font-medium">Motivo/Descrição:</span> ${data.properties.hs_meeting_body}</p>` : ''}
+            ${createDate ? `<p class="text-sm text-slate-500"><span class="">Registrado em:</span> ${createDate}</p>` : ''}
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove('hidden');
     },
     
     // =====================================================
@@ -3557,7 +4973,183 @@
         self.showToast('Erro ao agendar reunião. Tente novamente.', 'error');
       });
     },
-    
+
+    // =========================================================================
+    // FUNÇÕES PARA 2ª REUNIÃO (AGENDAR 2ª VISITA)
+    // =========================================================================
+
+    openMarcar2aReuniaoModal: function() {
+      var self = this;
+
+      var modalHTML = `
+        <div id="marcar-2a-reuniao-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto;">
+            <div style="padding: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Agendar 2ª Reunião</h3>
+                <button onclick="window.negocioDetalheModule.closeMarcar2aReuniaoModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
+                  <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <form id="marcar-2a-reuniao-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e Hora</label>
+                  <input type="datetime-local" id="reuniao2-start-time" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Observações</label>
+                  <textarea id="reuniao2-body" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Descreva o objetivo da 2ª reunião..." required></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                  <button type="button" onclick="window.negocioDetalheModule.closeMarcar2aReuniaoModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
+                    Cancelar
+                  </button>
+                  <button type="submit" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background: #2563EB; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Agendar 2ª Reunião
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Preencher data atual + 1 dia como padrão
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(14, 0, 0, 0); // 14:00 como horário padrão
+      var isoString = tomorrow.toISOString().slice(0, 16);
+      document.getElementById('reuniao2-start-time').value = isoString;
+
+      document.getElementById('marcar-2a-reuniao-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        self.confirmarAgendamento2aReuniaoInicial();
+      });
+
+      this.escMarcar2aReuniaoHandler = function(e) {
+        if (e.key === 'Escape') self.closeMarcar2aReuniaoModal();
+      };
+      document.addEventListener('keydown', this.escMarcar2aReuniaoHandler);
+    },
+
+    closeMarcar2aReuniaoModal: function() {
+      var modal = document.getElementById('marcar-2a-reuniao-modal');
+      if (modal) {
+        document.removeEventListener('keydown', this.escMarcar2aReuniaoHandler);
+        modal.remove();
+      }
+    },
+
+    confirmarAgendamento2aReuniaoInicial: function() {
+      var self = this;
+      var titulo = '2ª Visita marcada';
+      var startTimeElement = document.getElementById('reuniao2-start-time');
+      var startTime = startTimeElement ? startTimeElement.value.trim() : '';
+      var body = document.getElementById('reuniao2-body').value.trim();
+      var internalNotes = document.getElementById('reuniao2-body').value.trim();
+
+      // Validação explícita e obrigatória de data/hora
+      if (!startTime) {
+        self.showToast('Por favor, preencha a data e hora da reunião. Este campo é obrigatório.', 'warning');
+        if (startTimeElement) {
+          startTimeElement.focus();
+          startTimeElement.style.borderColor = '#EF4444';
+          setTimeout(function() {
+            startTimeElement.style.borderColor = '#D1D5DB';
+          }, 3000);
+        }
+        return;
+      }
+
+      // Validar se a data/hora não está vazia após trim
+      if (startTime === '') {
+        self.showToast('Por favor, preencha a data e hora da reunião. Este campo é obrigatório.', 'warning');
+        return;
+      }
+
+      // Validar formato de data/hora
+      var dateTime = new Date(startTime);
+      if (isNaN(dateTime.getTime())) {
+        self.showToast('Por favor, insira uma data e hora válidas.', 'warning');
+        return;
+      }
+
+      if (!titulo || !body) {
+        self.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+        return;
+      }
+
+      var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
+
+      if (!ticketId) {
+        this.showToast('ID do ticket do portal não encontrado.', 'error');
+        return;
+      }
+
+      // Converter datetime-local para formato ISO com timezone (dateTime já foi validado acima)
+      var isoStartTime = dateTime.toISOString();
+
+      // Preparar payload para API de meetings
+      var meetingPayload = {
+        type: 'marcar_2a_visita',
+        title: '2ª Visita - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente'),
+        start_time: dateTime.toISOString().replace('Z', '-03:00'), // Timezone Brasil
+        end_time: new Date(dateTime.getTime() + 60 * 60 * 1000).toISOString().replace('Z', '-03:00'), // +1 hora
+        contact_id: window.hubspotUserData?.contactId || null,
+        ticket_id: ticketId.toString(),
+        description: body
+      };
+
+      console.log('📅 Agendando 2ª meeting via API (type: marcar_2a_visita):', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ 2ª Meeting agendada com sucesso via API:', result);
+
+        // Salvar meeting_id para usar quando confirmar 2ª visita realizada
+        if (result && result.meeting_id) {
+          window.current2MeetingId = result.meeting_id;
+          console.log('📝 2ª Meeting ID salvo:', result.meeting_id);
+        }
+
+        self.showToast('2ª Reunião agendada com sucesso!', 'success');
+
+        // Após agendar, atualizar o step para "2ª Reunião marcada" (etapa 1207696559)
+        return window.negocioDetalheModule.updateStep('1207696559', '2ª Reunião marcada', {
+          tipo: 'agendamento_2a_reuniao',
+          titulo: '2ª Visita - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente'),
+          dataHora: meetingPayload.start_time,
+          meeting_id: result.meeting_id
+        });
+      })
+      .then(function() {
+        window.negocioDetalheModule.closeMarcar2aReuniaoModal();
+      })
+      .catch(function(error) {
+        console.error('Erro ao agendar 2ª reunião:', error);
+        self.showToast('Erro ao agendar 2ª reunião. Tente novamente.', 'error');
+      });
+    },
+
     confirmarEnvioDocumentacao: function() {
       console.log('Dc envada') 
       this.updateStep('1043275525', 'Documentação enviada', {
@@ -3572,7 +5164,7 @@
         // Criar meeting de documentos complementares via nova API
         self.createComplementaryDocumentsMeeting();
         
-        self.updateStep('1043275527', 'Em análise do backoffice', {
+        self.updateStep('1043275527', 'Pré Análise e Due Diligence', {
           tipo: 'confirmacao_documentos_complementares'
         });
       });
@@ -3626,40 +5218,80 @@
     
     openApresentacaoRealizadaModal: function() {
       var self = this;
-      
+
+      // Obter dados do ticket e etapa atual
+      var ticketData = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data : null;
+      var currentStep = ticketData ? ticketData.hs_pipeline_stage : null;
+
+      // Calcular valor médio das amostras
+      var valorLimpo = ticketData?.valor_medio_amostras ? String(ticketData.valor_medio_amostras).replace(/R\$\s*/g, '').trim() : '0';
+      var valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+      console.log('currentStep', currentStep)
+      // Verificar condições para mostrar opção de avaliação externa
+      var mostrarAvaliacaoExterna = valorMedioAmostrasNumero < 2000000 && currentStep === '1207696559';
+      // Verificar se é fluxo < 2M para mostrar opção de contraproposta
+      var isFluxoMenor2M = valorMedioAmostrasNumero < 2000000;
+
+      console.log('🔍 [Modal Apresentação] Valor imóvel:', valorMedioAmostrasNumero, '| Etapa atual:', currentStep, '| Mostrar avaliação externa:', mostrarAvaliacaoExterna, '| Mostrar contraproposta:', isFluxoMenor2M);
+
+      // Gerar opções do select de motivos de perda
+      var motivosOptions = Object.entries(this.motivosPerda)
+        .map(function(item) {
+          return '<option value="' + item[0] + '">' + item[1] + '</option>';
+        })
+        .join('');
+
       var modalHTML = `
         <div id="apresentacao-realizada-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto; max-height: 90vh;">
             <div style="padding: 1.5rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Apresentação da Proposta Realizada</h3>
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Resultado da apresentação</h3>
                 <button onclick="window.negocioDetalheModule.closeApresentacaoRealizadaModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
                   <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
                 </button>
               </div>
-              
+
               <form id="apresentacao-realizada-form" style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
-                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data da Apresentação</label>
+                  <label id="apresentacao-data-label" style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data da Apresentação</label>
                   <input type="date" id="apresentacao-data" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
                 </div>
-                
+≈
                 <div>
-                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Resultado da Apresentação</label>
-                  <textarea id="apresentacao-resultado" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Descreva o resultado da apresentação, reações do cliente, próximos passos..." required></textarea>
+                  <label id="apresentacao-resultado-label" style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Resultado da Apresentação <span style="color: #EF4444;">*</span>
+                  </label>
+                  <textarea id="apresentacao-resultado" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Faltou algum valor para o aceite do cliente? Quais dividas ele precisa quitar e por isso precisa de mais capital?" required></textarea>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">Mínimo 10 caracteres - Descreva o resultado da apresentação</p>
                 </div>
-                
+
                 <div>
                   <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
                   <select id="apresentacao-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
                     <option value="">Selecione o próximo passo</option>
-                    <option value="renegociar">Cliente quer renegociar a proposta</option>
-                    <option value="formalizar">Pode seguir para formalização</option>
+                    ${mostrarAvaliacaoExterna ? '<option value="avaliacao_externa">Solicitar avaliação externa</option>' : ''}
+                    ${isFluxoMenor2M ? '<option value="contraproposta">Solicitar contraproposta</option>' : ''}
+                    ${!mostrarAvaliacaoExterna ? '<option value="formalizar">Solicitar formalização de contrato</option>' : ''}
+                    <option value="standby">Pausar negociação (Stand by)</option>
+                    <option value="perdido">Cliente NÃO quer seguir (Perder o lead)</option>
                   </select>
                 </div>
-                
+
+                <!-- Campo de Motivo da Perda (inicialmente oculto) -->
+                <div id="motivo-perda-container" style="display: none;">
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Motivo da Perda <span style="color: #EF4444;">*</span>
+                  </label>
+                  <select id="apresentacao-motivo-perda" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;">
+                    <option value="">Selecione o motivo...</option>
+                    ${motivosOptions}
+                  </select>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">É obrigatório informar o motivo quando o cliente não quer seguir</p>
+                </div>
+
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
                   <button type="button" onclick="window.negocioDetalheModule.closeApresentacaoRealizadaModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
                     Cancelar
@@ -3673,19 +5305,45 @@
           </div>
         </div>
       `;
-      
+
       document.body.insertAdjacentHTML('beforeend', modalHTML);
-      
+
       // Preencher data atual como padrão
       var today = new Date();
       var todayString = today.toISOString().slice(0, 10);
       document.getElementById('apresentacao-data').value = todayString;
-      
+
+      // Event listener para mostrar/ocultar campo de motivo da perda e alterar labels
+      document.getElementById('apresentacao-proximo-passo').addEventListener('change', function() {
+        var motivoPerdaContainer = document.getElementById('motivo-perda-container');
+        var motivoPerdaSelect = document.getElementById('apresentacao-motivo-perda');
+        var dataLabel = document.getElementById('apresentacao-data-label');
+        var resultadoLabel = document.getElementById('apresentacao-resultado-label');
+
+        if (this.value === 'perdido') {
+          motivoPerdaContainer.style.display = 'block';
+          motivoPerdaSelect.setAttribute('required', 'required');
+        } else {
+          motivoPerdaContainer.style.display = 'none';
+          motivoPerdaSelect.removeAttribute('required');
+          motivoPerdaSelect.value = ''; // Limpar seleção
+        }
+
+        // Alterar labels quando avaliação externa for selecionada
+        if (this.value === 'avaliacao_externa') {
+          dataLabel.textContent = 'Data combinada com o cliente';
+          resultadoLabel.innerHTML = 'Comentários para o avaliador externo <span style="color: #EF4444;">*</span>';
+        } else {
+          dataLabel.textContent = 'Data da Apresentação';
+          resultadoLabel.innerHTML = 'Resultado da Apresentação <span style="color: #EF4444;">*</span>';
+        }
+      });
+
       document.getElementById('apresentacao-realizada-form').addEventListener('submit', function(e) {
         e.preventDefault();
         self.confirmarApresentacaoRealizada();
       });
-      
+
       this.escApresentacaoRealizadaHandler = function(e) {
         if (e.key === 'Escape') self.closeApresentacaoRealizadaModal();
       };
@@ -3699,45 +5357,436 @@
         modal.remove();
       }
     },
-    
-    confirmarApresentacaoRealizada: function() {
-      var data = document.getElementById('apresentacao-data').value.trim();
-      var resultado = document.getElementById('apresentacao-resultado').value.trim();
-      var proximoPasso = document.getElementById('apresentacao-proximo-passo').value.trim();
-      
-      if (!data || !resultado || !proximoPasso) {
-        self.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+
+    // =====================================================
+    // MODAL RESULTADO SEGUNDA PROPOSTA
+    // =====================================================
+
+    openResultadoSegundaPropostaModal: function() {
+      var self = this;
+
+      // Gerar opções do select de motivos de perda
+      var motivosOptions = Object.entries(this.motivosPerda)
+        .map(function(item) {
+          return '<option value="' + item[0] + '">' + item[1] + '</option>';
+        })
+        .join('');
+
+      var modalHTML = `
+        <div id="segunda-proposta-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto; max-height: 90vh;">
+            <div style="padding: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Resultado da Segunda Proposta</h3>
+                <button onclick="window.negocioDetalheModule.closeResultadoSegundaPropostaModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
+                  <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <form id="segunda-proposta-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data da Apresentação</label>
+                  <input type="date" id="segunda-proposta-data" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Resultado/Comentários <span style="color: #EF4444;">*</span>
+                  </label>
+                  <textarea id="segunda-proposta-resultado" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Descreva o resultado da apresentação da segunda proposta..." required></textarea>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">Mínimo 10 caracteres - Descreva o resultado da apresentação</p>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
+                  <select id="segunda-proposta-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
+                    <option value="">Selecione o próximo passo</option>
+                    <option value="formalizar">Seguir para formalização</option>
+                    <option value="renegociar">Solicitar reajuste da proposta</option>
+                    <option value="standby">Pausar negociação (Stand by)</option>
+                    <option value="perdido">Cliente NÃO quer seguir (Perder o lead)</option>
+                  </select>
+                </div>
+
+                <!-- Campo de Motivo da Perda (inicialmente oculto) -->
+                <div id="segunda-proposta-motivo-perda-container" style="display: none;">
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Motivo da Perda <span style="color: #EF4444;">*</span>
+                  </label>
+                  <select id="segunda-proposta-motivo-perda" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;">
+                    <option value="">Selecione o motivo...</option>
+                    ${motivosOptions}
+                  </select>
+                  <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">É obrigatório informar o motivo quando o cliente não quer seguir</p>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                  <button type="button" onclick="window.negocioDetalheModule.closeResultadoSegundaPropostaModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
+                    Cancelar
+                  </button>
+                  <button type="submit" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background: #2563EB; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Confirmar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Preencher data atual como padrão
+      var today = new Date();
+      var todayString = today.toISOString().slice(0, 10);
+      document.getElementById('segunda-proposta-data').value = todayString;
+
+      // Event listener para mostrar/ocultar campo de motivo da perda
+      document.getElementById('segunda-proposta-proximo-passo').addEventListener('change', function() {
+        var motivoPerdaContainer = document.getElementById('segunda-proposta-motivo-perda-container');
+        var motivoPerdaSelect = document.getElementById('segunda-proposta-motivo-perda');
+
+        if (this.value === 'perdido') {
+          motivoPerdaContainer.style.display = 'block';
+          motivoPerdaSelect.setAttribute('required', 'required');
+        } else {
+          motivoPerdaContainer.style.display = 'none';
+          motivoPerdaSelect.removeAttribute('required');
+          motivoPerdaSelect.value = ''; // Limpar seleção
+        }
+      });
+
+      document.getElementById('segunda-proposta-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        self.confirmarResultadoSegundaProposta();
+      });
+
+      this.escSegundaPropostaHandler = function(e) {
+        if (e.key === 'Escape') self.closeResultadoSegundaPropostaModal();
+      };
+      document.addEventListener('keydown', this.escSegundaPropostaHandler);
+    },
+
+    closeResultadoSegundaPropostaModal: function() {
+      var modal = document.getElementById('segunda-proposta-modal');
+      if (modal) {
+        document.removeEventListener('keydown', this.escSegundaPropostaHandler);
+        modal.remove();
+      }
+    },
+
+    confirmarResultadoSegundaProposta: function() {
+      var self = this;
+      var data = document.getElementById('segunda-proposta-data').value.trim();
+      var resultado = document.getElementById('segunda-proposta-resultado').value.trim();
+      var proximoPasso = document.getElementById('segunda-proposta-proximo-passo').value.trim();
+      var motivoPerda = document.getElementById('segunda-proposta-motivo-perda').value.trim();
+
+      // Validar data
+      if (!data) {
+        self.showToast('Por favor, selecione a data da apresentação.', 'warning');
         return;
       }
-      
+
+      // Validar próximo passo
+      if (!proximoPasso) {
+        self.showToast('Por favor, selecione o próximo passo.', 'warning');
+        return;
+      }
+
+      // Validar resultado (obrigatório para todas as opções)
+      if (!resultado) {
+        self.showToast('Por favor, preencha o campo "Resultado/Comentários".', 'warning');
+        return;
+      }
+
+      // Validar tamanho mínimo do resultado (mínimo 10 caracteres)
+      if (resultado.length < 10) {
+        self.showToast('O campo "Resultado/Comentários" deve ter no mínimo 10 caracteres. Atual: ' + resultado.length + '/10', 'warning');
+        return;
+      }
+
+      // Validar motivo da perda quando opção "perdido" é selecionada
+      if (proximoPasso === 'perdido' && !motivoPerda) {
+        self.showToast('Por favor, selecione o motivo da perda.', 'warning');
+        return;
+      }
+
       // Formatar data para DD/MM/AAAA
       var dateObj = new Date(data + 'T12:00:00'); // Adicionar horário para evitar problemas de timezone
       var formattedDate = dateObj.toLocaleDateString('pt-BR');
-      
+
       // Determinar próxima etapa baseado na seleção
       var proximaEtapa, proximoLabel;
-      
+
+      if (proximoPasso === 'formalizar') {
+        proximaEtapa = '1095528867';
+        proximoLabel = 'Documentação para formalização';
+      } else if (proximoPasso === 'renegociar') {
+        // proximaEtapa = '1062003578';
+        proximaEtapa = '1095528866';
+        proximoLabel = 'Pedido de Reajuste da proposta';
+      } else if (proximoPasso === 'standby') {
+        proximaEtapa = '1206453052';
+        proximoLabel = 'Pausar negociação e esperar novo contato';
+      } else if (proximoPasso === 'perdido') {
+        proximaEtapa = '1095528873';
+        proximoLabel = 'Perdido';
+      }
+
+      // Criar meeting similar a createPresentationMeeting
+      if (proximoPasso === 'standby' || proximoPasso === 'perdido') {
+        this.createPresentationMeetingStandy(data, resultado, proximoPasso, motivoPerda);
+      } else {
+        // Criar meeting de segunda proposta
+        this.createSegundaPropostaMeeting(data, resultado, proximoPasso);
+      }
+
+      // Preparar dados para enviar ao updateStep
+      var updateData = {
+        data: formattedDate,
+        resultado: resultado,
+        proximo_passo: proximoPasso,
+        tipo: 'segunda_proposta_realizada'
+      };
+
+      // Se for standby, salvar a etapa anterior (Segunda proposta cliente)
+      if (proximoPasso === 'standby') {
+        updateData.etapa_anterior_standby = '1208820114'; // Segunda proposta cliente
+      }
+
+      // Se for perdido, adicionar motivo da perda e seu label
+      if (proximoPasso === 'perdido' && motivoPerda) {
+        updateData.motivo_perda = motivoPerda;
+        updateData.motivo_perda_label = self.motivosPerda[motivoPerda] || motivoPerda;
+        updateData.ticket_motivo_da_perda = motivoPerda;
+        updateData.ticket_detalhe_o_motivo_da_perda = resultado;
+      }
+
+      this.updateStep(proximaEtapa, proximoLabel, updateData);
+
+      this.closeResultadoSegundaPropostaModal();
+    },
+
+    // Função para criar meeting de segunda proposta
+    createSegundaPropostaMeeting: function(data, resultado, proximoPasso) {
+      var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
+
+      if (!ticketId) {
+        console.error('❌ Ticket ID não disponível para criar meeting de segunda proposta');
+        return;
+      }
+
+      // Converter data para datetime no meio do dia (15:00 como padrão)
+      var dateTime = new Date(data + 'T15:00:00');
+
+      var description = 'Segunda proposta apresentada ao cliente. ';
+      description += 'Resultado: ' + resultado + '. ';
+      description += 'Próximo passo: ' + (proximoPasso === 'renegociar' ? 'Solicitar reajuste da proposta' : 'Seguir para formalização');
+
+      var meetingPayload = {
+        type: 'segunda_proposta_apresentada',
+        title: 'Segunda Proposta Apresentada - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente'),
+        start_time: dateTime.toISOString().replace('Z', '-03:00'), // Timezone Brasil
+        end_time: new Date(dateTime.getTime() + 60 * 60 * 1000).toISOString().replace('Z', '-03:00'), // +1 hora
+        status: 'COMPLETED', // Já fechado
+        contact_id: window.hubspotUserData?.contactId || null,
+        ticket_id: ticketId.toString(),
+        description: description
+      };
+
+      console.log('🎯 Criando meeting de segunda proposta via nova API:', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ Meeting de segunda proposta criado com sucesso:', result);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao criar meeting de segunda proposta:', error);
+      });
+    },
+
+    confirmarApresentacaoRealizada: function() {
+      var self = this;
+      var data = document.getElementById('apresentacao-data').value.trim();
+      var resultado = document.getElementById('apresentacao-resultado').value.trim();
+      var proximoPasso = document.getElementById('apresentacao-proximo-passo').value.trim();
+      var motivoPerda = document.getElementById('apresentacao-motivo-perda').value.trim();
+
+      // Validar data
+      if (!data) {
+        self.showToast('Por favor, selecione a data da apresentação.', 'warning');
+        return;
+      }
+
+      // Validar próximo passo
+      if (!proximoPasso) {
+        self.showToast('Por favor, selecione o próximo passo.', 'warning');
+        return;
+      }
+
+      // Validar resultado da apresentação (obrigatório para todas as opções)
+      if (!resultado) {
+        self.showToast('Por favor, preencha o campo "Resultado da Apresentação".', 'warning');
+        return;
+      }
+
+      // Validar tamanho mínimo do resultado (mínimo 10 caracteres)
+      if (resultado.length < 10) {
+        self.showToast('O campo "Resultado da Apresentação" deve ter no mínimo 10 caracteres. Atual: ' + resultado.length + '/10', 'warning');
+        return;
+      }
+
+      // Validar motivo da perda quando opção "perdido" é selecionada
+      if (proximoPasso === 'perdido' && !motivoPerda) {
+        self.showToast('Por favor, selecione o motivo da perda.', 'warning');
+        return;
+      }
+
+      // Formatar data para DD/MM/AAAA
+      var dateObj = new Date(data + 'T12:00:00'); // Adicionar horário para evitar problemas de timezone
+      var formattedDate = dateObj.toLocaleDateString('pt-BR');
+
+      // Determinar próxima etapa baseado na seleção
+      var proximaEtapa, proximoLabel;
+
       if (proximoPasso === 'renegociar') {
         proximaEtapa = '1062003578';
-        proximoLabel = 'Negociação da proposta';
+        proximoLabel = 'Pedido de Contraproposta do cliente';
+      } else if (proximoPasso === 'contraproposta') {
+        proximaEtapa = '1062003578';
+        proximoLabel = 'Pedido de Contraproposta do cliente';
       } else if (proximoPasso === 'formalizar') {
         proximaEtapa = '1095528867';
         proximoLabel = 'Documentação para formalização';
+      } else if (proximoPasso === 'avaliacao_externa') {
+        proximaEtapa = '1186972699';
+        proximoLabel = 'Avaliação externa';
+      } else if (proximoPasso === 'standby') {
+        proximaEtapa = '1206453052';
+        proximoLabel = 'Pausar negociação e esperar novo contato';
+      } else if (proximoPasso === 'perdido') {
+        proximaEtapa = '1095528873';
+        proximoLabel = 'Perdido';
       }
-      
-      // Criar meeting de apresentação realizada via nova API
-      this.createPresentationMeeting(data, resultado, proximoPasso);
-      
-      this.updateStep(proximaEtapa, proximoLabel, {
+
+      if(proximoPasso === 'standby' || proximoPasso === 'perdido') {
+        this.createPresentationMeetingStandy(data, resultado, proximoPasso, motivoPerda);
+      } else {
+        this.createPresentationMeeting(data, resultado, proximoPasso);
+      }
+
+      // Preparar dados para enviar ao updateStep
+      var updateData = {
         data: formattedDate,
         resultado: resultado,
         proximo_passo: proximoPasso,
         tipo: 'apresentacao_realizada'
-      });
-      
+      };
+
+      // Se for standby, salvar a etapa anterior (2ª Reunião marcada)
+      if (proximoPasso === 'standby') {
+        updateData.etapa_anterior_standby = '1207696559'; // 2ª Reunião marcada
+      }
+
+      // Se for perdido, adicionar motivo da perda e seu label
+      if (proximoPasso === 'perdido' && motivoPerda) {
+        updateData.motivo_perda = motivoPerda;
+        updateData.motivo_perda_label = self.motivosPerda[motivoPerda] || motivoPerda;
+        updateData.ticket_motivo_da_perda = motivoPerda;
+        updateData.ticket_detalhe_o_motivo_da_perda = resultado;
+      }
+
+      this.updateStep(proximaEtapa, proximoLabel, updateData);
+
       this.closeApresentacaoRealizadaModal();
     },
     
+    // Nova função para criar meeting de apresentação realizada com resultado Standy e Perdido
+    createPresentationMeetingStandy: function(data, resultado, proximoPasso, motivoPerda) {
+      var self = this;
+      var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
+
+      if (!ticketId) {
+        console.error('❌ Ticket ID não disponível para criar meeting de apresentação');
+        return;
+      }
+
+      // Converter data para datetime no meio do dia (15:00 como padrão)
+      var dateTime = new Date(data + 'T15:00:00');
+
+      var description = '';
+      var meetingType = '';
+      var meetingTitle = '';
+
+      // Determinar tipo de meeting e descrição baseado no próximo passo
+      if (proximoPasso === 'perdido') {
+        meetingType = 'perdido_franquias';
+        meetingTitle = 'Lead Perdido - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente');
+        description = 'Lead perdido após apresentação da proposta. ';
+
+        // Adicionar motivo da perda
+        if (motivoPerda) {
+          var motivoLabel = self.motivosPerda[motivoPerda] || motivoPerda;
+          description += 'Motivo da perda: ' + motivoLabel + '. ';
+        }
+
+        description += 'Comentários: ' + resultado;
+      } else if (proximoPasso === 'Standby') {
+        meetingType = 'standby_franquias';
+        meetingTitle = 'Em Standby - ' + (window.hubspotTicketPortalData?.data?.subject || 'Cliente');
+        description = 'Negócio em Standby - pausado para aguardar novo contato. ';
+        description += 'Comentários: ' + resultado;
+      }
+
+      var meetingPayload = {
+        type: meetingType,
+        title: meetingTitle,
+        start_time: dateTime.toISOString().replace('Z', '-03:00'), // Timezone Brasil
+        end_time: new Date(dateTime.getTime() + 60 * 60 * 1000).toISOString().replace('Z', '-03:00'), // +1 hora
+        status: 'COMPLETED', // Já fechado
+        contact_id: window.hubspotUserData?.contactId || null,
+        ticket_id: ticketId.toString(),
+        description: description
+      };
+
+      console.log('📋 Criando meeting via nova API:', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ Meeting criado com sucesso:', result);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao criar meeting:', error);
+      });
+    },
+
     // Nova função para criar meeting de apresentação realizada via nova API
     createPresentationMeeting: function(data, resultado, proximoPasso) {
       var ticketId = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data.hs_object_id : null;
@@ -3788,7 +5837,214 @@
         // Não há API antiga para apresentações, apenas log do erro
       });
     },
-    
+
+    // ============================================================
+    // FUNÇÕES PARA SEGUNDA PROPOSTA
+    // ============================================================
+
+    downloadProposta: function() {
+      var ticket = window.hubspotTicketData?.data;
+
+      if (!ticket || !ticket.link_da_proposta) {
+        this.showToast('Link da proposta não disponível no momento.', 'warning');
+        return;
+      }
+
+      // Abrir link da proposta em nova aba
+      window.open(ticket.link_da_proposta, '_blank');
+
+      console.log('📥 Download da proposta iniciado:', ticket.link_da_proposta);
+    },
+
+    openApresentacaoSegundaPropostaModal: function() {
+      var self = this;
+
+      var modalHTML = `
+        <div id="apresentacao-segunda-proposta-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <div style="position: relative; background: white; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 32rem; width: 100%; overflow-y: auto;">
+            <div style="padding: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 500; color: #111827;">Apresentação da Segunda Proposta</h3>
+                <button onclick="window.negocioDetalheModule.closeApresentacaoSegundaPropostaModal()" style="color: #9CA3AF; cursor: pointer; border: none; background: none; padding: 0.25rem;">
+                  <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <form id="apresentacao-segunda-proposta-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data da Apresentação</label>
+                  <input type="date" id="segunda-proposta-data" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem;" required>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Resultado da Apresentação</label>
+                  <textarea id="segunda-proposta-resultado" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;" placeholder="Descreva o resultado da apresentação da segunda proposta, reações do cliente..." required></textarea>
+                </div>
+
+                <div>
+                  <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Próximo Passo</label>
+                  <select id="segunda-proposta-proximo-passo" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; font-size: 0.875rem; background-color: white;" required>
+                    <option value="">Selecione o próximo passo</option>
+                    <option value="formalizar">Cliente aceitou - Seguir para formalização</option>
+                    <option value="perdido">Cliente recusou - Marcar como perdido</option>
+                  </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                  <button type="button" onclick="window.negocioDetalheModule.closeApresentacaoSegundaPropostaModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">
+                    Cancelar
+                  </button>
+                  <button type="submit" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background: #4F46E5; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Confirmar Apresentação
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Preencher data atual como padrão
+      var today = new Date();
+      var todayString = today.toISOString().slice(0, 10);
+      document.getElementById('segunda-proposta-data').value = todayString;
+
+      document.getElementById('apresentacao-segunda-proposta-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        self.confirmarApresentacaoSegundaProposta();
+      });
+
+      this.escSegundaPropostaHandler = function(e) {
+        if (e.key === 'Escape') self.closeApresentacaoSegundaPropostaModal();
+      };
+      document.addEventListener('keydown', this.escSegundaPropostaHandler);
+    },
+
+    closeApresentacaoSegundaPropostaModal: function() {
+      var modal = document.getElementById('apresentacao-segunda-proposta-modal');
+      if (modal) {
+        document.removeEventListener('keydown', this.escSegundaPropostaHandler);
+        modal.remove();
+      }
+    },
+
+    confirmarApresentacaoSegundaProposta: function() {
+      var self = this;
+      var data = document.getElementById('segunda-proposta-data').value.trim();
+      var resultado = document.getElementById('segunda-proposta-resultado').value.trim();
+      var proximoPasso = document.getElementById('segunda-proposta-proximo-passo').value.trim();
+
+      if (!data || !resultado || !proximoPasso) {
+        this.showToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+        return;
+      }
+
+      // Formatar data para DD/MM/AAAA
+      var dateObj = new Date(data + 'T12:00:00');
+      var formattedDate = dateObj.toLocaleDateString('pt-BR');
+
+      // Determinar próxima etapa baseado na seleção
+      var proximaEtapa, proximoLabel;
+
+      if (proximoPasso === 'formalizar') {
+        proximaEtapa = '1095528867';
+        proximoLabel = 'Documentação para formalização';
+      } else if (proximoPasso === 'perdido') {
+        proximaEtapa = '1095528873';
+        proximoLabel = 'Perdido';
+      }
+
+      var ticket = window.hubspotTicketData?.data;
+      if (!ticket) {
+        this.showToast('Dados do ticket não disponíveis.', 'error');
+        return;
+      }
+
+      var ticketId = ticket.hs_object_id;
+
+      console.log('📊 [Segunda Proposta] Dados coletados:', {
+        data: formattedDate,
+        resultado: resultado,
+        proximoPasso: proximoPasso,
+        proximaEtapa: proximaEtapa,
+        ticketId: ticketId
+      });
+
+      // Payload para atualizar o ticket
+      var payload = {
+        ticketId: ticketId,
+        properties: {
+          hs_pipeline_stage: proximaEtapa
+        }
+      };
+
+      // Atualizar ticket via N8N
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/update-ticket', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ Ticket atualizado com sucesso:', result);
+        self.showToast('Apresentação da segunda proposta registrada com sucesso! Atualizando etapa para: ' + proximoLabel, 'success');
+        self.closeApresentacaoSegundaPropostaModal();
+
+        // Recarregar página após 2 segundos
+        setTimeout(function() {
+          window.location.reload();
+        }, 2000);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao atualizar ticket:', error);
+        self.showToast('Erro ao registrar apresentação. Tente novamente.', 'error');
+      });
+
+      // Criar meeting para registrar a apresentação da segunda proposta
+      var meetingPayload = {
+        ticketId: ticketId,
+        meetingType: 'apresentacao_segunda_proposta',
+        title: 'Apresentação da Segunda Proposta - ' + formattedDate,
+        body: 'Resultado: ' + resultado + '\n\nPróximo passo: ' + proximoLabel,
+        startTime: dateObj.getTime(),
+        endTime: dateObj.getTime() + (60 * 60 * 1000), // 1 hora depois
+        internalNotes: 'Meeting criado automaticamente pelo portal do franqueado - Segunda Proposta'
+      };
+
+      console.log('🎯 Criando meeting de apresentação da segunda proposta:', meetingPayload);
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/meetings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meetingPayload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro na resposta do servidor: ' + response.status);
+        }
+        return response.json();
+      })
+      .then(function(result) {
+        console.log('✅ Meeting de segunda proposta criado com sucesso:', result);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao criar meeting:', error);
+      });
+    },
+
     openSolicitarReajusteModal: function() {
       var modal = document.getElementById('modal-solicitar-reajuste');
       var form = document.getElementById('form-solicitar-reajuste');
@@ -3898,7 +6154,7 @@
         self.showToast('Solicitação de reajuste criada com sucesso!', 'success');
         
         // Atualizar o step do funil
-        self.updateStep('1095528866', 'Reajuste da proposta', {
+        self.updateStep('1095528866', 'Reajuste da proposta do (comitê investidor)', {
           justificativa: justificativa,
           tipo: 'solicitacao_reajuste',
           taskId: result.taskId || null
@@ -3921,9 +6177,77 @@
     
     reabrirNegociacao: function() {
       var self = this;
-      this.showConfirm('Deseja reabrir a negociação da proposta?', function() {
-        self.updateStep('1062003577', 'Negociação da proposta', {
-          tipo: 'reabertura_negociacao'
+      
+      // NOVA LÓGICA: Verificar Fluxo 2
+      const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+      let isFluxo2 = false;
+      
+      if (ticket && ticket.valor_medio_amostras) {
+        const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+        const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+        isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      }
+      
+      if (isFluxo2) {
+        // Para Fluxo 2, redirecionar para Comitê Investidor
+        this.showConfirm('Deseja reabrir a negociação e voltar para "Comitê investidor"?', function() {
+          self.updateStep('1208748705', 'Comitê investidor', {
+            tipo: 'reabertura_negociacao'
+          });
+        });
+      } else {
+        // Comportamento original
+        this.showConfirm('Deseja reabrir a Pedido de Contraproposta do cliente?', function() {
+          self.updateStep('1062003577', 'Pedido de Contraproposta do cliente', {
+            tipo: 'reabertura_negociacao'
+          });
+        });
+      }
+    },
+
+    retomarNegociacao: function() {
+      var self = this;
+
+      // Obter dados do ticket para verificar de qual etapa veio
+      var ticketData = window.hubspotTicketPortalData ? window.hubspotTicketPortalData.data : null;
+      var etapaAnterior = ticketData ? ticketData.etapa_anterior_standby : null;
+
+      // NOVA LÓGICA: Verificar Fluxo 2
+      const ticket = window.hubspotTicketData ? window.hubspotTicketData.data : null;
+      let isFluxo2 = false;
+      
+      if (ticket && ticket.valor_medio_amostras) {
+        const valorLimpo = String(ticket.valor_medio_amostras).replace(/R\$\s*/g, '').trim();
+        const valorMedioAmostrasNumero = this.parseCurrencyValue(valorLimpo);
+        isFluxo2 = valorMedioAmostrasNumero >= 2000000;
+      }
+
+      // Determinar etapa de retorno baseado na etapa anterior
+      var etapaRetorno, labelRetorno, mensagem;
+
+      if (etapaAnterior === '1208820114') {
+        // Veio da Segunda proposta cliente
+        etapaRetorno = '1208820114';
+        labelRetorno = 'Segunda proposta cliente';
+        mensagem = 'Deseja retomar a negociação e voltar para a etapa "Segunda proposta cliente"?';
+      } else {
+        // AJUSTE: Se Fluxo 2, mapear para Comitê Investidor
+        if (isFluxo2) {
+          etapaRetorno = '1208748705';
+          labelRetorno = 'Comitê investidor';
+          mensagem = 'Deseja retomar a negociação e voltar para a etapa "Comitê investidor"?';
+        } else {
+          // Padrão: veio da 2ª Reunião marcada ou não tem etapa anterior definida
+          etapaRetorno = '1207696559';
+          labelRetorno = '2ª Reunião marcada';
+          mensagem = 'Deseja retomar a negociação e voltar para a etapa "2ª Reunião marcada"?';
+        }
+      }
+
+      this.showConfirm(mensagem, function() {
+        self.updateStep(etapaRetorno, labelRetorno, {
+          tipo: 'retomada_negociacao_standby',
+          etapa_anterior_standby: null // Limpar o campo ao retomar
         });
       });
     },
@@ -4034,21 +6358,30 @@
         return;
       }
       
-      // Filtrar imagens e vídeos MP4
-      var mediaFiles = files.filter(file => file.type.startsWith('image/') || file.type === 'video/mp4');
+      // Filtrar imagens, vídeos MP4, PDFs e documentos Word
+      var mediaFiles = files.filter(file =>
+        file.type.startsWith('image/') ||
+        file.type === 'video/mp4' ||
+        file.type === 'application/pdf' ||
+        file.type === 'application/msword' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.name.toLowerCase().endsWith('.pdf') ||
+        file.name.toLowerCase().endsWith('.doc') ||
+        file.name.toLowerCase().endsWith('.docx')
+      );
       
       if (mediaFiles.length === 0) {
-        this.showToast('Por favor, selecione apenas arquivos de imagem (PNG, JPG, JPEG) ou vídeos MP4.', 'warning');
+        this.showToast('Por favor, selecione apenas imagens (PNG, JPG, JPEG), vídeos MP4, ou documentos (PDF, DOC, DOCX).', 'warning');
         return;
       }
       
-      // Verificar tamanho dos arquivos (10MB para imagens, 50MB para vídeos)
+      // Verificar tamanho dos arquivos (10MB para imagens e documentos, 50MB para vídeos)
       var oversizedFiles = mediaFiles.filter(file => {
         var maxSize = file.type === 'video/mp4' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
         return file.size > maxSize;
       });
       if (oversizedFiles.length > 0) {
-        this.showToast('Alguns arquivos excedem o limite de tamanho (10MB para imagens, 50MB para vídeos).', 'warning');
+        this.showToast('Alguns arquivos excedem o limite de tamanho (10MB para imagens e documentos, 50MB para vídeos).', 'warning');
         return;
       }
       
@@ -4421,12 +6754,12 @@
                             <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827;">Solicitar Avaliação Externa</h3>
                         </div>
                         <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Descrição (opcional)</label>
-                            <textarea id="avaliacao-descricao" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; resize: vertical; min-height: 80px;" placeholder="Descreva detalhes sobre a avaliação externa..."></textarea>
+                            <label style="required display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Descrição (obrigatório)</label>
+                            <textarea required id="avaliacao-descricao" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; resize: vertical; min-height: 80px;" placeholder="Descreva detalhes sobre a avaliação externa..."></textarea>
                         </div>
                         <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e horário combinado (opcional)</label>
-                            <input type="datetime-local" id="avaliacao-data-hora" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem;">
+                            <label style="required display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Data e horário combinado (obrigatório)</label>
+                            <input required type="datetime-local" id="avaliacao-data-hora" style="width: 100%; border: 1px solid #D1D5DB; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.875rem;">
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                             <button id="avaliacao-cancel" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; cursor: pointer;">Cancelar</button>
@@ -4445,9 +6778,22 @@
         });
         
         document.getElementById('avaliacao-confirm').addEventListener('click', function() {
-            var descricao = document.getElementById('avaliacao-descricao').value;
+            var descricao = document.getElementById('avaliacao-descricao').value.trim();
             var dataHora = document.getElementById('avaliacao-data-hora').value;
-            
+
+            // Validação dos campos obrigatórios
+            if (!descricao) {
+                alert('Por favor, preencha a descrição da avaliação.');
+                document.getElementById('avaliacao-descricao').focus();
+                return;
+            }
+
+            if (!dataHora) {
+                alert('Por favor, selecione a data e horário combinado.');
+                document.getElementById('avaliacao-data-hora').focus();
+                return;
+            }
+
             self.solicitarAvaliacaoExterna(descricao, dataHora);
         });
     },
@@ -4580,9 +6926,545 @@
           }
           return response.json();
       });
+  },
+
+  // =================================================================================
+  // FUNÇÕES DE CONTROLE DOS DOCUMENTOS COMPLEMENTARES
+  // =================================================================================
+
+  openUploadDocumentsModal: function() {
+    var modal = document.getElementById('modal-upload-documents');
+    var form = document.getElementById('form-upload-documents');
+
+    if (modal && form) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      var uploadBtn = document.getElementById('upload-btn-documents');
+      if (uploadBtn) uploadBtn.disabled = true;
+
+      this.selectedDocumentFiles = null;
+
+      // Configurar drag and drop
+      var dropZone = document.getElementById('drop-zone-documents');
+      var fileInput = document.getElementById('file-input-documents');
+
+      if (dropZone && fileInput) {
+        // Click no drop zone abre seletor de arquivos
+        dropZone.addEventListener('click', function() {
+          fileInput.click();
+        });
+
+        // Mudança no input de arquivo
+        fileInput.addEventListener('change', function(e) {
+          window.negocioDetalheModule.handleDocumentFiles(e.target.files);
+        });
+
+        // Drag and drop events
+        dropZone.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+          e.preventDefault();
+          dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+          e.preventDefault();
+          dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+          window.negocioDetalheModule.handleDocumentFiles(e.dataTransfer.files);
+        });
+      }
+
+      // Submit do formulário
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        window.negocioDetalheModule.submitUploadDocuments();
+      });
+
+      // Fechar modal com ESC
+      this.handleEscapeUploadDocuments = function(e) {
+        if (e.key === 'Escape') {
+          window.negocioDetalheModule.closeUploadDocumentsModal();
+        }
+      };
+      document.addEventListener('keydown', this.handleEscapeUploadDocuments);
+    }
+  },
+
+  closeUploadDocumentsModal: function() {
+    var modal = document.getElementById('modal-upload-documents');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      // Remover event listener
+      if (this.handleEscapeUploadDocuments) {
+        document.removeEventListener('keydown', this.handleEscapeUploadDocuments);
+        this.handleEscapeUploadDocuments = null;
+      }
+
+      // Limpar arquivos selecionados
+      this.selectedDocumentFiles = null;
+    }
+  },
+
+  handleDocumentFiles: function(files) {
+    var fileList = document.getElementById('file-list-documents');
+    var uploadBtn = document.getElementById('upload-btn-documents');
+
+    if (!files || files.length === 0) {
+      console.log('Nenhum arquivo foi fornecido para handleDocumentFiles');
+      return;
+    }
+
+    // Filtrar apenas tipos de documento permitidos
+    var allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/rtf',
+      'application/zip',
+      'application/x-rar-compressed'
+    ];
+
+    var documentFiles = Array.from(files).filter(file => {
+      return allowedTypes.includes(file.type) ||
+             file.name.toLowerCase().endsWith('.pdf') ||
+             file.name.toLowerCase().endsWith('.doc') ||
+             file.name.toLowerCase().endsWith('.docx') ||
+             file.name.toLowerCase().endsWith('.xls') ||
+             file.name.toLowerCase().endsWith('.xlsx') ||
+             file.name.toLowerCase().endsWith('.txt') ||
+             file.name.toLowerCase().endsWith('.rtf') ||
+             file.name.toLowerCase().endsWith('.zip') ||
+             file.name.toLowerCase().endsWith('.rar');
+    });
+
+    if (documentFiles.length === 0) {
+      this.showToast('Por favor, selecione apenas documentos válidos (PDF, DOC, DOCX, XLS, XLSX, TXT, RTF, ZIP, RAR).', 'warning');
+      return;
+    }
+
+    // Verificar tamanho dos arquivos (10MB máximo)
+    var oversizedFiles = documentFiles.filter(file => file.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      this.showToast('Alguns arquivos excedem o limite de 10MB.', 'warning');
+      return;
+    }
+
+    this.selectedDocumentFiles = documentFiles;
+
+    // Exibir lista de arquivos
+    fileList.innerHTML = documentFiles.map(file => `
+      <div class="flex items-center justify-between p-2 bg-slate-100 rounded mb-2">
+        <span class="text-sm text-slate-700">${file.name}</span>
+        <span class="text-xs text-slate-500">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+      </div>
+    `).join('');
+
+    fileList.classList.remove('hidden');
+    uploadBtn.disabled = false;
+  },
+
+  submitUploadDocuments: function() {
+    if (!this.selectedDocumentFiles || this.selectedDocumentFiles.length === 0) {
+      this.showToast('Por favor, selecione pelo menos um documento.', 'warning');
+      return;
+    }
+
+    // Criar uma cópia dos arquivos antes de fechar o modal
+    var filesToUpload = Array.from(this.selectedDocumentFiles);
+
+    // Fechar o modal
+    this.closeUploadDocumentsModal();
+
+    // Fazer upload dos documentos
+    this.uploadDocuments(filesToUpload);
+  },
+
+  uploadDocuments: function(files) {
+    var self = this;
+    var ticketId = window.hubspotTicketData ? window.hubspotTicketData.data.hs_object_id : null;
+
+    if (!ticketId) {
+      this.showToast('ID do ticket não encontrado.', 'error');
+      return;
+    }
+
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      this.showToast('Nenhum arquivo foi selecionado para upload.', 'error');
+      return;
+    }
+
+    // Obter IDs existentes do campo documentos_complementares
+    var currentDocuments = window.hubspotTicketData && window.hubspotTicketData.data ?
+                          (window.hubspotTicketData.data.documentos_complementares || '') : '';
+    var existingIds = currentDocuments ? currentDocuments.split(';').filter(id => id.trim()) : [];
+
+    // Fazer upload sequencial
+    this.uploadDocumentsSequential(files, ticketId, 'documentos_complementares', existingIds, function(success) {
+      if (success) {
+        self.showToast('Documentos enviados com sucesso!', 'success');
+        setTimeout(function() {
+          location.reload();
+        }, 1500);
+      }
+    });
+  },
+
+  uploadDocumentsSequential: function(files, ticketId, fieldName, currentIds, callback) {
+    var self = this;
+    var uploadIndex = 0;
+    var allUploadedIds = currentIds.slice();
+
+    function uploadNextFile() {
+      if (uploadIndex >= files.length) {
+        // Todos os uploads concluídos
+        callback(true);
+        return;
+      }
+
+      var file = files[uploadIndex];
+      var uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('ticket_id', ticketId);
+      uploadData.append('field_name', fieldName);
+      uploadData.append('fileName', file.name);
+      uploadData.append('current_ids', allUploadedIds.join(';'));
+
+      // Mostrar progresso
+      self.showToast(`Enviando documento ${uploadIndex + 1}/${files.length}: ${file.name}`, 'info');
+
+      fetch('https://n8n2.rooftop.com.br/webhook/portal/upload-documento', {
+        method: 'POST',
+        body: uploadData
+      })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        console.log('data', data)
+        if (data.id) {
+          allUploadedIds.push(data.id);
+          console.log('✅ Documento enviado:', file.name, 'ID:', data.id);
+        } else {
+          throw new Error(data.error || 'Erro desconhecido no upload');
+        }
+
+        uploadIndex++;
+        // Continuar com o próximo arquivo
+        setTimeout(uploadNextFile, 500);
+      })
+      .catch(function(error) {
+        console.error('Erro ao enviar documento:', file.name, error);
+        self.showToast('Erro ao enviar documento "' + file.name + '". Processo interrompido.', 'error');
+        callback(false);
+      });
+    }
+
+    // Iniciar o upload do primeiro documento
+    uploadNextFile();
+  },
+
+  renderDocumentsList: function() {
+    var documentsContainer = document.getElementById('documents-list');
+    if (!documentsContainer) return;
+
+    var ticketData = window.hubspotTicketData?.data;
+    if (!ticketData || !ticketData.documentos_complementares) {
+      documentsContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum documento enviado ainda.</p>';
+      return;
+    }
+    
+    const documentos = this.getDocumentosInfo(ticketData);
+
+    var documentIds = ticketData.documentos_complementares.split(';').filter(id => id.trim());
+    console.log('documentIds', documentIds)
+    if (documentIds.length === 0) {
+      documentsContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum documento enviado ainda.</p>';
+      return;
+    }
+
+    // Gerar lista de documentos
+    // this.loadFileFromEndpoint()
+    // Carregar arquivos e popular lista
+    this.loadMultipleFiles(documentIds).then(function(files) {
+      console.log('etapa 1')
+      var fileListHTML = files.map(function(file, index) {
+        console.log('etapa 2')
+        if (!file) return '';
+        console.log('etapa 3')
+        
+        // var fileIcon = self.getFileIcon(file.type, file.extension);
+        // var fileSize = self.formatFileSize(file.size);
+        
+        return `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background-color: #f8fafc; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div onclick="window.negocioDetalheModule.downloadFile('${documentIds[index]}')" style="display: flex; align-items: center; gap: 12px;cursor:pointer;">
+            <div style="width: 32px; height: 32px; background-color: #dbeafe; border-radius: 8px; display: flex; align-items: center;  justify-content: center;">
+              📄
+            </div>
+            <div>
+              <p style="font-size: 14px; font-weight: 500; color: #0f172a; margin: 0;">${file.name}</p>
+            </div>
+          </div>
+          <p onclick="window.negocioDetalheModule.downloadFile('${documentIds[index]}')"  style="color: #2563eb; text-decoration: none; padding: 8px;cursor:pointer;">
+            ⬇️ Download
+          </p> 
+        </div>
+        `;
+      }).join('');
+      
+      documentsContainer.innerHTML = fileListHTML;
+    }).catch(function(error) {
+      console.error('Erro ao carregar lista de arquivos:', error);
+      document.getElementById('file-list').innerHTML = `
+        <div style="text-align: center; padding: 1rem 0; color: #DC2626;">
+          <p style="margin: 0;">Erro ao carregar arquivos. Tente novamente.</p>
+        </div>
+      `;
+    });
+
+    // var documentsHTML = documentos.map(function(doc) {
+    //   var fileName = doc.nome;
+    //   var downloadUrl = 'https://#' + doc.id;
+  
+    //   return `
+    //     <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background-color: #f8fafc; 
+    // border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+    //       <div style="display: flex; align-items: center; gap: 12px;">
+    //         <div style="width: 32px; height: 32px; background-color: #dbeafe; border-radius: 8px; display: flex; align-items: center; 
+    // justify-content: center;">
+    //           📄
+    //         </div>
+    //         <div>
+    //           <p style="font-size: 14px; font-weight: 500; color: #0f172a; margin: 0;">${fileName}</p>
+    //         </div>
+    //       </div>
+    //       <!-- <a href="${downloadUrl}" target="_blank" style="color: #2563eb; text-decoration: none; padding: 8px;">
+    //         ⬇️ Download
+    //       </a> -->
+    //     </div>
+    //   `;
+    // }).join('');
+
+    // documentsContainer.innerHTML = documentsHTML;
+  },
+
+  /**
+   * Gerar HTML do badge de prioridade
+   * @param {string} priority - Prioridade do ticket (LOW, MEDIUM, HIGH, URGENT)
+   */
+  getPriorityBadgeHTML: function(priority) {
+    console.log('Prioridade', priority)
+    var priorityMap = {
+      'LOW': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
+      'MEDIUM': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },
+      'HIGH': { label: 'Alta', color: 'bg-orange-100 text-orange-800', value: 'HIGH' },
+      'URGENT': { label: 'Urgente', color: 'bg-red-100 text-red-800', value: 'URGENT' },
+      'BAIXA': { label: 'Baixa', color: 'bg-green-100 text-green-800', value: 'LOW' },
+      'MÉDIA': { label: 'Média', color: 'bg-yellow-100 text-yellow-800', value: 'MEDIUM' },
+      'ALTA': { label: 'Alta', color: 'bg-orange-100 text-orange-800', value: 'HIGH' },
+      'URGENTE': { label: 'Urgente', color: 'bg-red-100 text-red-800', value: 'URGENT' }
+    };
+
+    var priorityInfo = priorityMap[priority?.toUpperCase()] || { label: 'Não definida', color: 'bg-gray-100 text-gray-800', value: 'MEDIUM' };
+    return '<span class="px-2 py-1 text-sm rounded-full ' + priorityInfo.color + '">' + priorityInfo.label + '</span>';
+  },
+
+  /**
+   * Abrir edição inline de prioridade no header
+   * @param {HTMLElement} cell - Elemento clicado
+   * @param {Event} event - Evento de click
+   */
+  abrirEdicaoPrioridadeHeader: function(cell, event) {
+    var self = this;
+
+    // Prevenir propagação do evento
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Fechar qualquer editor aberto
+    this.fecharEdicaoPrioridadeHeader();
+
+    var ticketId = cell.getAttribute('data-ticket-id');
+    var currentPriority = cell.getAttribute('data-priority');
+
+    // Criar select inline
+    var selectHTML = '\n' +
+      '      <select\n' +
+      '        id="priority-editor-header-' + ticketId + '"\n' +
+      '        class="px-2 py-1 text-sm rounded-lg border border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white cursor-pointer"\n' +
+      '        data-ticket-id="' + ticketId + '"\n' +
+      '        data-original-priority="' + currentPriority + '"\n' +
+      '      >\n' +
+      '        <option value="LOW" ' + (currentPriority === 'LOW' ? 'selected' : '') + '>Baixa</option>\n' +
+      '        <option value="MEDIUM" ' + (currentPriority === 'MEDIUM' ? 'selected' : '') + '>Média</option>\n' +
+      '        <option value="HIGH" ' + (currentPriority === 'HIGH' ? 'selected' : '') + '>Alta</option>\n' +
+      '        <option value="URGENT" ' + (currentPriority === 'URGENT' ? 'selected' : '') + '>Urgente</option>\n' +
+      '      </select>\n' +
+      '    ';
+
+    // Substituir conteúdo da célula pelo select
+    cell.innerHTML = selectHTML;
+
+    var selectElement = document.getElementById('priority-editor-header-' + ticketId);
+
+    if (selectElement) {
+      // Prevenir propagação de eventos do select
+      selectElement.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+
+      selectElement.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+      });
+
+      // Focar no select imediatamente
+      selectElement.focus();
+
+      // Event listener para mudança de valor (salvar)
+      selectElement.addEventListener('change', function() {
+        var newPriority = this.value;
+        var originalPriority = this.getAttribute('data-original-priority');
+
+        // Só atualizar se realmente mudou
+        if (newPriority !== originalPriority) {
+          self.atualizarPrioridadeHeader(ticketId, newPriority, cell);
+        }
+      });
+
+      // Event listener para ESC (cancelar)
+      selectElement.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          self.fecharEdicaoPrioridadeHeader(cell, currentPriority);
+        }
+      });
+
+      // Event listener para click fora do select (fechar sem salvar)
+      setTimeout(function() {
+        document.addEventListener('click', function clickOutsideHandler(e) {
+          if (selectElement && !selectElement.contains(e.target)) {
+            self.fecharEdicaoPrioridadeHeader(cell, currentPriority);
+            document.removeEventListener('click', clickOutsideHandler);
+          }
+        });
+      }, 300);
+    }
+  },
+
+  /**
+   * Atualizar prioridade via N8N (header)
+   * @param {string} ticketId - ID do ticket
+   * @param {string} newPriority - Nova prioridade
+   * @param {HTMLElement} cell - Elemento para atualizar
+   */
+  atualizarPrioridadeHeader: function(ticketId, newPriority, cell) {
+    var self = this;
+
+    // Mostrar loading
+    cell.innerHTML = '\n' +
+      '      <div class="inline-flex items-center px-2 py-1">\n' +
+      '        <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">\n' +
+      '          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>\n' +
+      '          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>\n' +
+      '        </svg>\n' +
+      '      </div>\n' +
+      '    ';
+
+    // Preparar dados para N8N
+    var updateData = {
+      objectId: ticketId,
+      hs_ticket_priority: newPriority
+    };
+
+    console.log('📤 Atualizando prioridade (header):', updateData);
+
+    // Enviar para N8N
+    var endpointUrl = 'https://n8n2.rooftop.com.br/webhook/portal/update-ticket';
+
+    fetch(endpointUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData)
+    })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Erro HTTP: ' + response.status);
+        }
+        return response.text().then(function(text) {
+          try {
+            return text ? JSON.parse(text) : { success: true };
+          } catch (e) {
+            return { success: true, data: text };
+          }
+        });
+      })
+      .then(function(responseData) {
+        console.log('✅ Prioridade atualizada (header):', responseData);
+
+        // Atualizar célula com novo valor
+        cell.setAttribute('data-priority', newPriority);
+        cell.innerHTML = self.getPriorityBadgeHTML(newPriority);
+
+        // Mostrar feedback de sucesso
+        cell.classList.add('bg-green-50');
+        setTimeout(function() {
+          cell.classList.remove('bg-green-50');
+        }, 1000);
+      })
+      .catch(function(error) {
+        console.error('❌ Erro ao atualizar prioridade (header):', error);
+
+        // Mostrar erro e restaurar valor original
+        cell.innerHTML = '\n' +
+          '        <span class="px-2 py-1 text-sm rounded-full bg-red-100 text-red-800">Erro ao salvar</span>\n' +
+          '      ';
+
+        // Recarregar página após 2 segundos
+        setTimeout(function() {
+          window.location.reload();
+        }, 2000);
+      });
+  },
+
+  /**
+   * Fechar editor de prioridade (header)
+   * @param {HTMLElement} cell - Célula para restaurar (opcional)
+   * @param {string} priority - Prioridade a restaurar (opcional)
+   */
+  fecharEdicaoPrioridadeHeader: function(cell, priority) {
+    var self = this;
+
+    // Se cell e priority forem fornecidos, restaurar valor
+    if (cell && priority) {
+      cell.innerHTML = this.getPriorityBadgeHTML(priority);
+    }
+
+    // Remover todos os editores abertos
+    var editors = document.querySelectorAll('[id^="priority-editor-header-"]');
+    editors.forEach(function(editor) {
+      var ticketId = editor.getAttribute('data-ticket-id');
+      var originalPriority = editor.getAttribute('data-original-priority');
+
+      if (ticketId && originalPriority) {
+        var parentCell = editor.closest('[data-priority-cell-header]');
+        if (parentCell) {
+          parentCell.innerHTML = self.getPriorityBadgeHTML(originalPriority);
+        }
+      }
+    });
   }
-  
-  
+
   };
 
   window.negocioDetalheModule = module;
